@@ -1,0 +1,12 @@
+/* printer page extras */
+#insetS{left:277px;border-color:rgba(255,190,80,.5)}
+#insetS .hd{color:#d98a1c}
+#insetS .cross:before,#insetS .cross:after{background:rgba(255,190,80,.35)}
+.inset .hd .rec{display:inline-block;width:7px;height:7px;border-radius:50%;background:#e33;margin-right:6px;opacity:.25}
+#hud{width:318px}
+#hud .row{padding:2px 0;font-size:12.5px}
+#hud .bar{margin:3px 0 5px}
+#log{max-height:110px}
+@media (max-width:1100px){#insetS{display:none}}
+#hint{left:auto;right:12px;bottom:calc(var(--barH,46px) + 24px);transform:none}
+@media (max-width:1400px){#title .t2{display:none}.inset{width:200px;height:217px}#insetS{left:220px}#log{display:none}#bar button{padding:6px 8px}}

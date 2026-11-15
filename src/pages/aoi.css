@@ -1,0 +1,9 @@
+/* AOI page: third inset (defect review) next to the 2D camera and the 3D height map */
+#insetD{left:542px;border-color:rgba(255,90,100,.55)}
+#insetD .hd{color:#ff6470}
+#hud #log{max-height:112px}
+@media (max-width:1100px){#insetD{display:none}}
+#hint{left:812px;transform:none;max-width:calc(100% - 830px);overflow:hidden;text-overflow:ellipsis}
+@media (max-height:850px){.inset{height:200px;width:190px}#insetR{left:210px}#insetD{left:408px}}
+#insetR .scale{top:44px}
+#insetR .scale:before{top:-14px}

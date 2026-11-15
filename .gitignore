@@ -1,0 +1,4 @@
+shots/
+/*.png
+.DS_Store
+__pycache__/

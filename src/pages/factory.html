@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SMT PLANT — electronics assembly factory · SMT line simulation</title>
+<link rel="stylesheet" href="../shell.css">
+<link rel="stylesheet" href="factory.css">
+</head>
+<body>
+<aside id="side"><div id="rail">
+  <button id="sideTgl" title="Show / hide panel"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  <button id="themeTgl" title="Switch White / Dark gray theme"><svg viewBox="0 0 24 24" id="themeIco"></svg></button>
+  <div class="vtxt">PLANT</div></div>
+ <div id="sideBody">
+  <div class="fn">SMT PLANT</div><div class="fn-sub">Electronics assembly plant with two dual-lane SMT lines — loader, printer, SPI, lane shuttle, two placement machines, reflow oven, AOI, merge / NG buffer, unloader — plus component store, post-SMT, warehouse, utilities and offices. Every machine runs its own process; boards are handed machine to machine (SMEMA).</div>
+  <div class="sec"><h3>Theme</h3><div class="seg2"><button data-theme-btn="light">White</button><button data-theme-btn="dark">Dark gray</button></div></div>
+  <div class="sec"><h3>On-screen data</h3><label class="chk"><input type="checkbox" id="ovc-title" data-ovc="title" checked><span>Plant title</span></label><label class="chk"><input type="checkbox" id="ovc-cycle" data-ovc="cycle" checked><span>Plant output</span></label><label class="chk"><input type="checkbox" id="ovc-hud" data-ovc="hud" checked><span>Machine inspector</span></label><label class="chk"><input type="checkbox" id="ovc-gantt" data-ovc="gantt" checked><span>State timeline</span></label><label class="chk"><input type="checkbox" id="ovc-map" data-ovc="map" checked><span>Plant map</span></label><label class="chk"><input type="checkbox" id="ovc-hint" data-ovc="hint" checked><span>Mouse hint</span></label></div>
+  <div class="sec"><h3>Plant KPIs <span id="kpiT" style="text-transform:none;letter-spacing:0;font-weight:400"></span></h3><div class="stats" id="kpis"></div><p class="note" id="kpiNote">Bottleneck = the busiest machine of a line (never waiting). OEE = availability × performance × quality of that bottleneck. FPY = boards passing AOI without a flag.</p></div>
+  <div class="sec"><h3>Lines · click a machine</h3><div id="lineList"></div></div>
+  <div class="sec"><h3>Machine states</h3><div class="legend" id="legend"></div></div>
+  <div class="sec"><h3>Plant events</h3><div id="plog" class="plog"></div></div>
+ </div></aside>
+<main id="stage"><canvas id="c"></canvas>
+<div id="title" class="panel" data-ov="title"><div class="t1">SMT PLANT</div><div class="t2" id="titleSub">2 SMT lines · component store · post-SMT · warehouse</div></div>
+<div id="cycle" class="panel" data-ov="cycle"><div class="k" id="cyK">PLANT OUTPUT</div><div class="v" id="cyV">—</div><div class="s" id="cyS"></div></div>
+<div id="hud" class="panel" data-ov="hud">
+  <div class="mh"><b id="mName">—</b><span id="mState" class="pill idle">—</span></div>
+  <div class="msub" id="mSub">Click a machine in the plant or in the side panel.</div>
+  <div id="mrows"></div>
+  <div id="minset" class="none"><div class="hd"><span id="minsetT">CAMERA</span><b id="minsetL" style="color:var(--tx);font-weight:500">LIVE</b></div></div>
+  <div class="acts"><button id="mFly">Fly to</button><button id="mPrev" title="Previous machine">◀</button><button id="mNext" title="Next machine">▶</button><button id="mCam" title="Next machine camera">Camera ▸</button><a id="mPage" href="#" target="_blank">Open machine page ↗</a></div>
+  <div class="acts mviews" id="mViews"></div>
+  <div id="mlog"></div>
+</div>
+<div id="gantt" class="panel" data-ov="gantt"><div class="hd"><span>MACHINE STATES · LAST <span id="gWin">10</span> MIN</span><select id="gLine"></select></div><canvas id="ganttC"></canvas></div>
+<div id="map" class="panel" data-ov="map"><div class="hd"><span>PLANT MAP</span><span id="mapT">click to fly</span></div><canvas id="mapC"></canvas></div>
+<div id="hint" data-ov="hint">Drag = rotate · Wheel = zoom · Right-drag = pan · W A S D / arrows = walk · Click a machine to inspect it</div>
+<div id="bar" class="panel">
+  <button data-v="plant" class="on">Plant</button>
+  <button data-v="line1">Line 1</button>
+  <button data-v="line2">Line 2</button>
+  <button data-v="store">Store</button>
+  <button data-v="warehouse">Warehouse</button>
+  <button data-v="postsmt">Post-SMT</button>
+  <button data-v="offices">Offices</button>
+  <button data-v="utility">Utility</button>
+  <button data-v="walk">Walk</button>
+  <div class="sep"></div>
+  <button id="bLab">Labels</button>
+  <button id="bXray">X-ray covers</button>
+  <div class="sep"></div>
+  <button id="bPause">Pause</button>
+  <button data-s="1" class="on">1×</button>
+  <button data-s="2">2×</button>
+  <button data-s="5">5×</button>
+  <button data-s="10">10×</button>
+  <button data-s="30">30×</button>
+</div>
+<div id="tags"></div>
+<div id="loading">Starting the plant…<small id="loadSub">building machines</small></div>
+</main>
+<script src="../shell.js"></script>
+<script src="../vendor/three.r147.min.js"></script>
+<script src="../vendor/OrbitControls.js"></script>
+<script src="../vendor/BufferGeometryUtils.js"></script>
+<script src="../pcbkit.js"></script>
+<script src="../core.js"></script>
+<script src="../line.js"></script>
+<script src="../machines/printer.js"></script>
+<script src="../machines/placement.js"></script>
+<script src="../machines/aoi.js"></script>
+<script src="../machines/spi.js"></script>
+<script src="../machines/reflow.js"></script>
+<script src="../machines/handling.js"></script>
+<script src="../factory/props.js"></script>
+<script src="../factory/building.js"></script>
+<script src="../factory/areas.js"></script>
+<script src="factory.page.js"></script>
+</body>
+</html>

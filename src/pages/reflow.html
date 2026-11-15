@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REFLOW — forced-convection lead-free reflow oven · SMT line simulation</title>
+<link rel="stylesheet" href="../shell.css">
+<link rel="stylesheet" href="reflow.css">
+</head>
+<body>
+<aside id="side"><div id="rail">
+  <button id="sideTgl" title="Show / hide panel"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  <button id="themeTgl" title="Switch White / Dark gray theme"><svg viewBox="0 0 24 24" id="themeIco"></svg></button>
+  <div class="vtxt">REFLOW</div></div>
+ <div id="sideBody">
+  <div class="fn">REFLOW</div><div class="fn-sub">Dual-lane forced-convection reflow oven for lead-free solder: 10 heating zones (top + bottom), 3 cooling zones, nitrogen atmosphere, lift-up hood.</div>
+  <div class="sec"><h3>Theme</h3><div class="seg2"><button data-theme-btn="light">White</button><button data-theme-btn="dark">Dark gray</button></div></div>
+  <div class="sec"><h3>On-screen data</h3><label class="chk"><input type="checkbox" id="ovc-title" data-ovc="title" checked><span>Machine title</span></label><label class="chk"><input type="checkbox" id="ovc-cycle" data-ovc="cycle" checked><span>Transit time</span></label><label class="chk"><input type="checkbox" id="ovc-hud" data-ovc="hud" checked><span>Status panel</span></label><label class="chk"><input type="checkbox" id="ovc-log" data-ovc="log" checked><span>Event log</span></label><label class="chk"><input type="checkbox" id="ovc-prof" data-ovc="prof" checked><span>Thermal profile graph</span></label><label class="chk"><input type="checkbox" id="ovc-hint" data-ovc="hint" checked><span>Mouse hint</span></label></div>
+  <div class="sec"><h3>Machine</h3><table class="spec"><tr><td>Footprint</td><td>5800 × 1450 × 1550 mm (+ 2 × 400 mm extension conveyors)</td></tr><tr><td>Lanes</td><td>2 (lane 1 front, lane 2 rear), edge pin chain + centre support</td></tr><tr><td>Zones</td><td>10 heating (360 mm, top + bottom) + 3 cooling</td></tr><tr><td>Tunnel length</td><td>4680 mm, hood opens along the whole tunnel</td></tr><tr><td>Conveyor</td><td>80 cm/min (13.3 mm/s), never stops</td></tr><tr><td>Profile</td><td>SAC305 ramp-soak-spike, peak ≈ 245 °C, TAL ≈ 65 s above 217 °C</td></tr><tr><td>Atmosphere</td><td>N2, residual O2 800 – 1200 ppm</td></tr><tr><td>Board model</td><td>lumped, dT/dt = (T<sub>air</sub> − T) / τ, τ ≈ 33 s</td></tr><tr><td>Min. spacing</td><td>board length + 80 mm per lane</td></tr><tr><td>Exit</td><td>exit stop + 1 buffer position per lane; 3rd board → EXIT BLOCKED alarm</td></tr></table><p class="note">Generic machine model. Dimensions and process values follow published data for this machine class; units are millimetres, conveyor height 900 mm, boards flow left to right. A board needs about 8 minutes to cross the oven — use the speed buttons.</p></div>
+  <div class="sec"><h3>Position in the SMT line</h3><div class="flow"><span class="">LOADER</span><i>›</i><span class="">PRINTER</span><i>›</i><span class="">SPI</span><i>›</i><span class="">PLACEMENT</span><i>›</i><span class="me">REFLOW</span><i>›</i><span class="">AOI</span><i>›</i><span class="">UNLOADER</span></div></div>
+ </div></aside>
+<main id="stage"><canvas id="c"></canvas>
+<div id="title" class="panel" data-ov="title"><div class="t1">REFLOW</div><div class="t2">Dual-lane forced-convection reflow oven for lead-free solder: 10 heating zones, 3 cooling zones, nitrogen, lift-up hood.</div></div>
+<div id="cycle" class="panel" data-ov="cycle"><div class="k" id="cyK">OVEN TRANSIT</div><div class="v" id="cyV">—</div><div class="s" id="cyS"></div></div>
+<div id="hint" data-ov="hint">Drag = rotate · Wheel = zoom · Right-drag = pan · Click the hood to open it · 5×–30× speeds up the 8-minute transit</div>
+<div id="hud" data-ov="hud" class="panel">
+  <h2>REFLOW PROCESS</h2>
+  <div class="row"><span>State</span><span id="hState" class="pill idle">—</span></div>
+  <div class="row"><span>Detail</span><span id="phase">—</span></div>
+  <div class="row"><span>Conveyor speed</span><span id="spd">—</span></div>
+  <div class="row"><span>O₂ residual (N2)</span><span id="o2">—</span></div>
+  <div class="row"><span>Boards inside</span><span id="nIn" class="big">0</span></div>
+  <div class="row"><span>Boards out · rate</span><span><b id="nOut">0</b> · <span id="rate">—</span></span></div>
+  <h2 class="k">ZONES  (°C)</h2>
+  <table class="zt"><thead><tr><th>Zone</th><th>Set T/B</th><th>Top</th><th>Bottom</th><th></th></tr></thead><tbody id="zt"></tbody></table>
+  <h2 class="k" id="kTitle">LAST BOARD</h2>
+  <div class="kpi"><div class="row"><span>Peak</span><b id="kPeak">—</b></div><div class="row"><span>TAL &gt; 217 °C</span><b id="kTal">—</b></div><div class="row"><span>Max ramp</span><b id="kRamp">—</b></div><div class="row"><span>Cooling</span><b id="kCool">—</b></div><div class="row"><span>Transit</span><b id="kTr">—</b></div></div>
+  <div id="log" data-ov="log"></div>
+</div>
+<div id="profp" class="panel" data-ov="prof"><canvas id="prof"></canvas></div>
+<div id="bar" class="panel">
+  <button id="bHood">Open hood</button>
+  <button id="bTherm">Thermal view</button>
+  <button id="bXray">X-ray covers</button>
+  <button id="bLab">Labels</button>
+  <div class="sep"></div>
+  <button data-v="over" class="on">Overview</button>
+  <button data-v="hood">Hood open</button>
+  <button data-v="entrance">Entrance</button>
+  <button data-v="peak">Peak zones</button>
+  <button data-v="exit">Exit</button>
+  <button data-v="top">Top</button>
+  <div class="sep"></div>
+  <button id="bPause">Pause</button>
+  <button data-s="1" class="on">1×</button>
+  <button data-s="5">5×</button>
+  <button data-s="10">10×</button>
+  <button data-s="30">30×</button>
+</div>
+<div id="tags"></div>
+</main>
+<script src="../shell.js"></script>
+<script src="../vendor/three.r147.min.js"></script>
+<script src="../vendor/OrbitControls.js"></script>
+<script src="../vendor/BufferGeometryUtils.js"></script>
+<script src="../pcbkit.js"></script>
+<script src="../core.js"></script>
+<script src="../line.js"></script>
+<script src="../machines/reflow.js"></script>
+<script src="reflow.page.js"></script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AOI — dual-lane 3D automated optical inspection · SMT line simulation</title>
+<link rel="stylesheet" href="../shell.css">
+<link rel="stylesheet" href="aoi.css">
+</head>
+<body>
+<aside id="side"><div id="rail">
+  <button id="sideTgl" title="Show / hide panel"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  <button id="themeTgl" title="Switch White / Dark gray theme"><svg viewBox="0 0 24 24" id="themeIco"></svg></button>
+  <div class="vtxt">AOI</div></div>
+ <div id="sideBody">
+  <div class="fn">AOI</div><div class="fn-sub">Dual-lane 2D/3D automated optical inspection. Reflowed boards arrive from the reflow oven / buffer; inspected boards (pass or NG) leave to the unloader.</div>
+  <div class="sec"><h3>Theme</h3><div class="seg2"><button data-theme-btn="light">White</button><button data-theme-btn="dark">Dark gray</button></div></div>
+  <div class="sec"><h3>On-screen data</h3><label class="chk"><input type="checkbox" id="ovc-title" data-ovc="title" checked><span>Machine title</span></label><label class="chk"><input type="checkbox" id="ovc-cycle" data-ovc="cycle" checked><span>Cycle time</span></label><label class="chk"><input type="checkbox" id="ovc-hud" data-ovc="hud" checked><span>Status panel</span></label><label class="chk"><input type="checkbox" id="ovc-log" data-ovc="log" checked><span>Event log</span></label><label class="chk"><input type="checkbox" id="ovc-insets" data-ovc="insets" checked><span>Camera & 3D views</span></label><label class="chk"><input type="checkbox" id="ovc-hint" data-ovc="hint" checked><span>Mouse hint</span></label></div>
+  
+  <div class="sec"><h3>Machine</h3><table class="spec"><tr><td>Footprint</td><td>1250 × 1500 × 1600 mm</td></tr><tr><td>Lanes</td><td>2 (one optical head)</td></tr><tr><td>PCB, dual lane</td><td>50 × 50 – 330 × 280 mm</td></tr><tr><td>Top camera</td><td>15 MP, telecentric</td></tr><tr><td>FOV</td><td>58.56 × 58.56 mm at 15 µm</td></tr><tr><td>Side cameras</td><td>4 angled</td></tr><tr><td>3D</td><td>Multi-frequency moiré</td></tr><tr><td>Drive</td><td>Linear motor XY</td></tr><tr><td>Demo board</td><td>250 × 200 mm, 20 FOV</td></tr><tr><td>Detection model</td><td>per defect type, 90 – 99.9 %</td></tr><tr><td>Board ID</td><td>DataMatrix reader at infeed</td></tr><tr><td>Calibration</td><td>daily, target plate, 60 s</td></tr></table><p class="note">Generic machine model. Dimensions follow published data for this machine class; units are millimetres, conveyor height 900 mm, boards flow left to right.</p></div>
+  <div class="sec"><h3>Position in the SMT line</h3><div class="flow"><span class="">LOADER</span><i>›</i><span class="">PRINTER</span><i>›</i><span class="">SPI</span><i>›</i><span class="">PLACEMENT</span><i>›</i><span class="">REFLOW</span><i>›</i><span class="me">AOI</span><i>›</i><span class="">UNLOADER</span></div></div>
+ </div></aside>
+<main id="stage"><canvas id="c"></canvas>
+<div id="title" class="panel" data-ov="title"><div class="t1">AOI</div><div class="t2">Dual-lane 2D/3D automated optical inspection. Reflowed boards arrive from the reflow oven / buffer; inspected boards (pass or NG) leave to the unloader.</div></div>
+<div id="cycle" class="panel" data-ov="cycle"><div class="k" id="cyK">CYCLE TIME</div><div class="v" id="cyV">—</div><div class="s" id="cyS"></div></div>
+<div id="hint" data-ov="hint">Drag = rotate · Wheel = zoom · Right-drag = pan · Click the hood or the cabinet doors to open them · Review = last flagged part</div>
+<div id="hud" data-ov="hud" class="panel">
+  <h2>INSPECTION STATUS</h2>
+  <div class="row"><span>Head</span><span id="hState" class="pill idle">IDLE</span></div>
+  <div class="row"><span>Capture</span><span id="phase">—</span></div>
+  <div class="row"><span>FOV</span><span id="fov" class="big">0 / 20</span></div>
+  <div class="bar"><i id="fovBar"></i></div>
+  <div class="row"><span>Lane 1 (front)</span><span id="l1" class="pill idle">—</span></div>
+  <div class="row"><span>Lane 2 (rear)</span><span id="l2" class="pill idle">—</span></div>
+  <div class="row"><span>Last serial (DataMatrix)</span><span id="serial">—</span></div>
+  <div class="row"><span>Board warp (3D)</span><span id="warp">—</span></div>
+  <div class="row" style="margin-top:6px"><span>Boards inspected</span><span id="nIns" class="big">0</span></div>
+  <div class="row"><span>Pass / NG</span><span><b id="nOk" style="color:var(--ok)">0</b> / <b id="nNg" style="color:var(--ng)">0</b></span></div>
+  <div class="row"><span>First-pass yield</span><span id="yld">—</span></div>
+  <div class="row"><span>False calls</span><span id="nFc">—</span></div>
+  <div class="row"><span>Escapes (sim truth)</span><span id="nEsc">0</span></div>
+  <div class="row"><span>Last cycle time</span><span id="ct">—</span></div>
+  <div id="log" data-ov="log"></div>
+</div>
+<div id="inset" data-ov="insets" class="panel inset"><div class="hd"><span><i id="rec"></i>TOP CAMERA · 2D</span><b id="insL">LIVE</b></div><div class="cross"></div></div>
+<div id="insetD" data-ov="insets" class="panel inset"><div class="hd"><span>DEFECT REVIEW</span><b id="insDL">NO FLAG YET</b></div><div class="cross"></div></div>
+<div id="insetR" data-ov="insets" class="panel inset"><div class="hd"><span>3D HEIGHT MAP</span><b id="insR">—</b></div><div class="scale" data-top="6 mm"></div></div>
+<div id="bar" class="panel">
+  <button id="bHood">Open hood</button>
+  <button id="bXray">X-ray covers</button>
+  <button id="bLab">Labels</button>
+  <div class="sep"></div>
+  <button data-v="over" class="on">Overview</button>
+  <button data-v="inside">Inside</button>
+  <button data-v="follow">Follow head</button>
+  <button data-v="board">Board close-up</button>
+  <button data-v="top">Top</button>
+  <button data-v="review">Review</button>
+  <div class="sep"></div>
+  <button id="bPause">Pause</button>
+  <button data-s="0.5">0.5×</button>
+  <button data-s="1" class="on">1×</button>
+  <button data-s="2">2×</button>
+  <button data-s="4">4×</button>
+</div>
+<div id="tags"></div>
+</main>
+<script src="../shell.js"></script>
+<script src="../vendor/three.r147.min.js"></script>
+<script src="../vendor/OrbitControls.js"></script>
+<script src="../vendor/BufferGeometryUtils.js"></script>
+<script src="../pcbkit.js"></script>
+<script src="../core.js"></script>
+<script src="../line.js"></script>
+<script src="../machines/aoi.js"></script>
+<script src="aoi.page.js"></script>
+</body>
+</html>

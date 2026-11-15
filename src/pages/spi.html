@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SPI — 3D solder paste inspection · SMT line simulation</title>
+<link rel="stylesheet" href="../shell.css">
+</head>
+<body>
+<aside id="side"><div id="rail">
+  <button id="sideTgl" title="Show / hide panel"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  <button id="themeTgl" title="Switch White / Dark gray theme"><svg viewBox="0 0 24 24" id="themeIco"></svg></button>
+  <div class="vtxt">SPI</div></div>
+ <div id="sideBody">
+  <div class="fn">SPI</div><div class="fn-sub">In-line 3D solder paste inspection after the printer: dual moiré fringe projection, 2D colour shot, SPC and closed-loop feedback to the printer.</div>
+  <div class="sec"><h3>Theme</h3><div class="seg2"><button data-theme-btn="light">White</button><button data-theme-btn="dark">Dark gray</button></div></div>
+  <div class="sec"><h3>On-screen data</h3><label class="chk"><input type="checkbox" id="ovc-title" data-ovc="title" checked><span>Machine title</span></label><label class="chk"><input type="checkbox" id="ovc-cycle" data-ovc="cycle" checked><span>Cycle time</span></label><label class="chk"><input type="checkbox" id="ovc-hud" data-ovc="hud" checked><span>Status panel</span></label><label class="chk"><input type="checkbox" id="ovc-log" data-ovc="log" checked><span>Event log</span></label><label class="chk"><input type="checkbox" id="ovc-insets" data-ovc="insets" checked><span>Camera views</span></label><label class="chk"><input type="checkbox" id="ovc-hint" data-ovc="hint" checked><span>Mouse hint</span></label></div>
+  <div class="sec"><h3>Machine</h3><table class="spec"><tr><td>Footprint</td><td>1000 × 1300 × 1550 mm</td></tr><tr><td>Lanes</td><td>1 (lane 1 of the line)</td></tr><tr><td>Head</td><td>12 MP telecentric + 2 moiré projectors</td></tr><tr><td>FOV</td><td>40 × 40 mm · 7 × 5 = 35 FOV</td></tr><tr><td>Per FOV</td><td>2 × 4 fringe + 2D · ~0.3 s</td></tr><tr><td>Height range</td><td>0 – 500 µm</td></tr><tr><td>Limits</td><td>vol 50–150 % · h 60–200 µm · offset ≤150 µm · area 60–150 %</td></tr><tr><td>Feedback</td><td>|mean offset| &gt; 25 µm → printer</td></tr></table><p class="note">Generic machine model. Units are millimetres, conveyor height 900 mm, boards flow left to right.</p></div>
+  <div class="sec"><h3>Position in the SMT line</h3><div class="flow"><span class="">LOADER</span><i>›</i><span class="">PRINTER</span><i>›</i><span class="me">SPI</span><i>›</i><span class="">PLACEMENT</span><i>›</i><span class="">REFLOW</span><i>›</i><span class="">AOI</span><i>›</i><span class="">UNLOADER</span></div></div>
+ </div></aside>
+<main id="stage"><canvas id="c"></canvas>
+<div id="title" class="panel" data-ov="title"><div class="t1">SPI</div><div class="t2">In-line 3D solder paste inspection · 35 FOV · SPC + printer feedback</div></div>
+<div id="cycle" class="panel" data-ov="cycle"><div class="k" id="cyK">CYCLE TIME</div><div class="v" id="cyV">—</div><div class="s" id="cyS"></div></div>
+<div id="hint" data-ov="hint">Drag = rotate · Wheel = zoom · Right-drag = pan · Click the hood to open it</div>
+<div id="hud" data-ov="hud" class="panel">
+  <h2>INSPECTION</h2>
+  <div class="row"><span>Step</span><span id="hState" class="pill idle">IDLE</span></div>
+  <div class="row"><span>Detail</span><span id="phase">—</span></div>
+  <div class="row"><span>Sequence</span><span id="stepN" class="big">—</span></div>
+  <div class="bar"><i id="stepBar"></i></div>
+  <div class="row"><span>FOV</span><span id="fovN">0 / 35</span></div>
+  <div class="bar"><i id="fovBar"></i></div>
+  <div class="row"><span>Last result</span><span id="lastR" class="pill idle">—</span></div>
+  <div class="row"><span>Volume mean</span><span id="vol">—</span></div>
+  <div class="row"><span>Height mean</span><span id="hgt">—</span></div>
+  <div class="row"><span>Offset X / Y</span><span id="offs">—</span></div>
+  <div class="row"><span>Cpk (volume)</span><span id="cpk">—</span></div>
+  <div class="row"><span>Worst pad</span><span id="worst">—</span></div>
+  <div class="row" style="margin-top:6px"><span>Inspected</span><span id="nIns" class="big">0</span></div>
+  <div class="row"><span>OK / NG</span><span><span id="nOk">0</span> / <span id="nNg">0</span> · <span id="yld">—</span></span></div>
+  <div class="row"><span>Printer feedback</span><span id="nFb">0</span></div>
+  <div class="row"><span>Last cycle time</span><span id="ct">—</span></div>
+  <canvas id="spc" style="width:262px;height:116px;display:block;margin-top:6px"></canvas>
+  <div id="log" data-ov="log"></div>
+</div>
+<div id="inset" data-ov="insets" class="panel inset"><div class="hd"><span><i id="rec"></i>2D CAMERA</span><b id="insL">LIVE</b></div><div class="cross"></div></div>
+<div id="insetR" data-ov="insets" class="panel inset"><div class="hd"><span>3D HEIGHT MAP</span><b id="insR">—</b></div><div class="scale" data-top="200 µm"></div></div>
+<div id="bar" class="panel">
+  <button id="bHood">Open hood</button>
+  <button id="bXray">X-ray covers</button>
+  <button id="bCal">Calibrate</button>
+  <button id="bLab">Labels</button>
+  <div class="sep"></div>
+  <button data-v="over" class="on">Overview</button>
+  <button data-v="inside">Inside</button>
+  <button data-v="head">3D head</button>
+  <button data-v="board">Board</button>
+  <button data-v="top">Top</button>
+  <div class="sep"></div>
+  <button id="bPause">Pause</button>
+  <button data-s="0.5">0.5×</button>
+  <button data-s="1" class="on">1×</button>
+  <button data-s="2">2×</button>
+  <button data-s="4">4×</button>
+</div>
+<div id="tags"></div>
+</main>
+<script src="../shell.js"></script>
+<script src="../vendor/three.r147.min.js"></script>
+<script src="../vendor/OrbitControls.js"></script>
+<script src="../vendor/BufferGeometryUtils.js"></script>
+<script src="../pcbkit.js"></script>
+<script src="../core.js"></script>
+<script src="../line.js"></script>
+<script src="../machines/spi.js"></script>
+<script src="spi.page.js"></script>
+</body>
+</html>

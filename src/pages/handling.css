@@ -1,0 +1,5 @@
+#hud{width:330px;max-height:calc(100% - 90px);overflow:auto}
+#rows .mr{padding:5px 0;border-bottom:1px solid var(--line)}
+#rows .mr .n{display:flex;justify-content:space-between;align-items:center;font-weight:600}
+#rows .mr .d{color:var(--mut);font-family:Consolas,Menlo,monospace;font-size:11px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#bar{flex-wrap:wrap}

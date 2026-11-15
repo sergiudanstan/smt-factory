@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>PLACEMENT — dual-lane pick-and-place</title><link rel="stylesheet" href="../shell.css"><link rel="stylesheet" href="placement.css"></head>
+<body>
+<aside id="side"><div id="rail">
+  <button id="sideTgl" title="Show / hide panel"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  <button id="themeTgl" title="Switch White / Dark gray theme"><svg viewBox="0 0 24 24" id="themeIco"></svg></button>
+  <div class="vtxt">PLACEMENT</div></div>
+ <div id="sideBody">
+  <div class="fn">PLACEMENT</div><div class="fn-sub">Dual-lane, dual-gantry pick-and-place. Each 16-nozzle head picks from the feeder carts on its own side and builds the board on its own lane; boards arrive printed from the SPI and leave to the reflow oven.</div>
+  <div class="sec"><h3>Theme</h3><div class="seg2"><button data-theme-btn="light">White</button><button data-theme-btn="dark">Dark gray</button></div></div>
+  <div class="sec"><h3>On-screen data</h3><label class="chk"><input type="checkbox" id="ovc-title" data-ovc="title" checked><span>Machine title</span></label><label class="chk"><input type="checkbox" id="ovc-cycle" data-ovc="cycle" checked><span>Cycle time</span></label><label class="chk"><input type="checkbox" id="ovc-hud" data-ovc="hud" checked><span>Head / lane status</span></label><label class="chk"><input type="checkbox" id="ovc-timeline" data-ovc="timeline" checked><span>Cycle timeline</span></label><label class="chk"><input type="checkbox" id="ovc-hint" data-ovc="hint" checked><span>Mouse hint</span></label></div>
+  <div class="sec"><h3>Live state <span id="live-sub" style="text-transform:none;letter-spacing:0;font-weight:400"></span></h3>
+ <div class="stats">
+  <div class="stat"><small>Lane 1 placed</small><div class="value"><span id="s-p0">0</span><em class="s-total"></em></div><div class="sub">front head, front feeders</div></div>
+  <div class="stat"><small>Lane 2 placed</small><div class="value"><span id="s-p1">0</span><em class="s-total"></em></div><div class="sub">rear head, rear feeders</div></div>
+  <div class="stat"><small>Simulated rate</small><div class="value"><span id="s-cph">0</span><em>cph</em></div><div class="sub">actual placements / elapsed time</div></div>
+  <div class="stat"><small>Boards out</small><div class="value" id="s-out">0</div><div class="sub" id="s-cycle"></div></div>
+ </div>
+ <div class="maps">
+  <div><h4 class="hf">Lane 1 board <em id="m0-n"></em></h4><canvas id="map0" width="500" height="400"></canvas></div>
+  <div><h4 class="hr">Lane 2 board <em id="m1-n"></em></h4><canvas id="map1" width="500" height="400"></canvas></div>
+ </div><div class="legend" id="legend"></div></div>
+<div class="sec head"><h3>Heads · nozzle occupancy</h3>
+ <h4 class="hf">Head F · 16 nozzle <em id="hf-trip"></em></h4><div class="nozzles hf" id="noz-f"></div>
+ <h4 class="hr">Head R · 16 nozzle <em id="hr-trip"></em></h4><div class="nozzles hr" id="noz-r"></div>
+ <p class="note">Independent mounting: each gantry builds the board on its own lane from the feeder carts on its own side.</p></div>
+  <div class="sec"><h3>Production program</h3>
+<p class="note">Resident nozzles: S small · M medium · L large. XL sockets handle oversized parts in dedicated final trips.</p>
+<div class="program-head"><b>Head F</b><p id="program-0">Setting up</p><span id="rate-0">0 cph</span> · <span id="ppm-0">0 ppm</span></div>
+<div class="program-head"><b>Head R</b><p id="program-1">Setting up</p><span id="rate-1">0 cph</span> · <span id="ppm-1">0 ppm</span></div></div>
+<div class="sec"><h3>Machine</h3><table class="spec"><tr><td>Footprint</td><td>1280 × 2332 × 1444 mm</td></tr><tr><td>Lanes / heads</td><td>2 / 2 (16 nozzles each)</td></tr><tr><td>Max speed</td><td>42 000 cph (class)</td></tr><tr><td>Accuracy</td><td>± 40 µm / chip</td></tr><tr><td>PCB, dual lane</td><td>50 × 50 – 750 × 260 mm</td></tr><tr><td>Feeders</td><td>4 carts × 30 slots (8 mm)</td></tr><tr><td>Demo board</td><td>250 × 200 mm, 289 parts</td></tr><tr><td>Nozzle changes</td><td id="s-changes">0</td></tr><tr><td>Vision rejects</td><td id="s-rejects">0</td></tr><tr><td>Feeder alarms</td><td id="s-alarms">0</td></tr></table><div id="log"></div><p class="note">Generic machine model. Dimensions follow published data for this machine class; units are millimetres, conveyor height 900 mm, boards flow left to right.</p></div>
+  <div class="sec"><h3>Position in the SMT line</h3><div class="flow"><span class="">LOADER</span><i>›</i><span class="">PRINTER</span><i>›</i><span class="">SPI</span><i>›</i><span class="me">PLACEMENT</span><i>›</i><span class="">REFLOW</span><i>›</i><span class="">AOI</span><i>›</i><span class="">UNLOADER</span></div></div>
+ </div></aside>
+<main id="stage"><canvas id="c"></canvas>
+<div id="title" class="panel" data-ov="title"><div class="t1">PLACEMENT</div><div class="t2">Dual-lane, dual-gantry pick-and-place. Each 16-nozzle head picks from the feeder carts on its own side and builds the board on its own lane; boards arrive printed from the SPI and leave to the reflow oven.</div></div>
+<div id="cycle" class="panel" data-ov="cycle"><div class="k" id="cyK">CYCLE TIME</div><div class="v" id="cyV">—</div><div class="s" id="cyS"></div></div>
+<div id="hud" class="panel now" data-ov="hud">
+  <div class="now-row"><span class="chip conv">LANE 1</span><div class="what"><b id="now-c0">Idle</b><code id="cmd-c0"></code></div></div>
+  <div class="now-row"><span class="chip hf">HEAD F</span><div class="what"><b id="now-0">Ready</b><code id="cmd-0"></code></div></div>
+  <div class="now-row"><span class="chip conv">LANE 2</span><div class="what"><b id="now-c1">Idle</b><code id="cmd-c1"></code></div></div>
+  <div class="now-row"><span class="chip hr">HEAD R</span><div class="what"><b id="now-1">Ready</b><code id="cmd-1"></code></div></div>
+</div>
+<div id="tl" class="panel" data-ov="timeline">
+  <div class="timeline" id="timeline" role="img" aria-label="Independent head schedules and playheads"><canvas id="lanes"></canvas></div>
+  <div class="clock mono"><b id="clock-now">0.0</b> / <span id="clock-total">0.0</span> s</div>
+  
+</div>
+<div class="panel" id="tip" data-ov="hint"><b>Click the dark hood</b> to open the door</div>
+<div class="load-error" id="load-error">The 3D view needs WebGL. Try another browser.</div>
+<div id="bar" class="panel"><button id="door-f" type="button" aria-pressed="false">Open front door</button>
+<button id="door-r" type="button" aria-pressed="false">Open rear door</button>
+<span id="covers" style="display:contents"><span class="lbl">Covers</span><button type="button" data-cover="solid" aria-pressed="true">Solid</button><button type="button" data-cover="ghost">Ghost</button><button type="button" data-cover="off">Off</button></span>
+<div class="sep"></div>
+<span id="views" style="display:contents"><button type="button" data-v="iso" aria-pressed="true">Iso</button><button type="button" data-v="front">Front</button><button type="button" data-v="side">Side</button><button type="button" data-v="top">Top</button><button type="button" data-v="gantry">Gantry</button><button type="button" data-v="board">Boards</button><button type="button" data-v="pickf">Nozzle F</button><button type="button" data-v="pickr">Nozzle R</button></span>
+<div class="sep"></div>
+<button id="bPause">Pause</button>
+
+<span id="speeds" style="display:contents"><button type="button" data-s="0.25">¼×</button><button type="button" data-s="0.5">½×</button><button type="button" data-s="1" class="on">1×</button><button type="button" data-s="2">2×</button><button type="button" data-s="5">5×</button></span>
+<label class="toggle"><input type="checkbox" id="trail"> Path</label></div>
+<div id="tags"></div>
+</main>
+<script src="../shell.js"></script>
+<script src="../vendor/three.r147.min.js"></script>
+<script src="../vendor/OrbitControls.js"></script>
+<script src="../vendor/BufferGeometryUtils.js"></script>
+<script src="../pcbkit.js"></script>
+<script src="../core.js"></script>
+<script src="../line.js"></script>
+<script src="../machines/placement.js"></script>
+<script src="placement.page.js"></script>
+</body></html>

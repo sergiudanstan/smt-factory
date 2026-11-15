@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BOARD HANDLING — loader, shuttle, conveyor, merge, unloader · SMT line simulation</title>
+<link rel="stylesheet" href="../shell.css">
+<link rel="stylesheet" href="handling.css">
+</head>
+<body>
+<aside id="side"><div id="rail">
+  <button id="sideTgl" title="Show / hide panel"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  <button id="themeTgl" title="Switch White / Dark gray theme"><svg viewBox="0 0 24 24" id="themeIco"></svg></button>
+  <div class="vtxt">HANDLING</div></div>
+ <div id="sideBody">
+  <div class="fn">HANDLING</div><div class="fn-sub">Board-handling equipment of an SMT line: magazine loader, lane shuttle with NG reject, inspection conveyor, lane merge with NG buffer and magazine unloader.</div>
+  <div class="sec"><h3>Theme</h3><div class="seg2"><button data-theme-btn="light">White</button><button data-theme-btn="dark">Dark gray</button></div></div>
+  <div class="sec"><h3>On-screen data</h3><label class="chk"><input type="checkbox" id="ovc-title" data-ovc="title" checked><span>Title</span></label><label class="chk"><input type="checkbox" id="ovc-cycle" data-ovc="cycle" checked><span>Line throughput</span></label><label class="chk"><input type="checkbox" id="ovc-hud" data-ovc="hud" checked><span>Machine status</span></label><label class="chk"><input type="checkbox" id="ovc-hint" data-ovc="hint" checked><span>Mouse hint</span></label></div>
+  <div class="sec"><h3>Loader / unloader</h3><table class="spec"><tr><td>Footprint</td><td>1600 × 1000 mm, overall height 1550 mm (signal tower)</td></tr><tr><td>Magazine</td><td>320 × 355 × 563 mm, 50 slots, 10 mm pitch</td></tr><tr><td>Buffer</td><td>3 magazines + 2 on return conveyor</td></tr><tr><td>Release rate</td><td>max. 1 board / 6 s</td></tr></table></div>
+  <div class="sec"><h3>Shuttle / merge</h3><table class="spec"><tr><td>Footprint</td><td>1100 × 1300 mm</td></tr><tr><td>Segment drive</td><td>servo + timing belt, 2 linear guides</td></tr><tr><td>Reject rack</td><td>10 slots (emptied ~10 min)</td></tr><tr><td>NG buffer</td><td>20 slots (verified ~8 min)</td></tr></table><p class="note">Generic machine models; units are millimetres, conveyor height 900 mm, boards flow left to right. Demo rates: 5 % SPI reject and 8 % AOI NG (typical plants 1–3 % / 2–5 %); manual inspection dwell 12–25 s per board.</p></div>
+  <div class="sec"><h3>Position in the SMT line</h3><div class="flow"><span class="me">LOADER</span><i>›</i><span>PRINTER</span><i>›</i><span class="me">SHUTTLE</span><i>›</i><span>PLACEMENT</span><i>›</i><span>REFLOW</span><i>›</i><span class="me">MERGE</span><i>›</i><span class="me">UNLOADER</span></div></div>
+ </div></aside>
+<main id="stage"><canvas id="c"></canvas>
+<div id="title" class="panel" data-ov="title"><div class="t1">BOARD HANDLING</div><div class="t2">Loader · shuttle (5 % SPI NG) · inspection conveyor (8 % AOI NG) · merge · unloader</div></div>
+<div id="cycle" class="panel" data-ov="cycle"><div class="k" id="cyK">LINE OUTPUT</div><div class="v" id="cyV">—</div><div class="s" id="cyS"></div></div>
+<div id="hint" data-ov="hint">Drag = rotate · Wheel = zoom · Right-drag = pan · Click a cover to open it</div>
+<div id="hud" data-ov="hud" class="panel"><h2>MACHINES</h2><div id="rows"></div><div id="log"></div></div>
+<div id="bar" class="panel">
+  <button id="bHood">Open covers</button>
+  <button id="bXray">X-ray covers</button>
+  <button id="bLab">Labels</button>
+  <button id="bRep">Replenish</button>
+  <button id="bEmp">Empty full</button>
+  <div class="sep"></div>
+  <button data-v="over" class="on">Overview</button>
+  <button data-v="ld_over">Loader</button><button data-v="ld_lift">Lift</button><button data-v="ld_buffer">Buffer</button><button data-v="ld_pusher">Pusher</button>
+  <button data-v="sh_seg">Shuttle</button><button data-v="sh_drive">Drive</button><button data-v="sh_reject">Reject</button>
+  <button data-v="cv_over">Conveyor</button><button data-v="cv_lamp">Lamp</button>
+  <button data-v="mg_seg">Merge</button><button data-v="mg_ngbuf">NG buffer</button>
+  <button data-v="ul_over">Unloader</button><button data-v="ul_lift">Fill</button>
+  <div class="sep"></div>
+  <button id="bPause">Pause</button>
+  <button data-s="1" class="on">1×</button><button data-s="4">4×</button><button data-s="16">16×</button>
+</div>
+<div id="tags"></div>
+</main>
+<script src="../shell.js"></script>
+<script src="../vendor/three.r147.min.js"></script>
+<script src="../vendor/OrbitControls.js"></script>
+<script src="../vendor/BufferGeometryUtils.js"></script>
+<script src="../pcbkit.js"></script>
+<script src="../core.js"></script>
+<script src="../line.js"></script>
+<script src="../machines/handling.js"></script>
+<script src="handling.page.js"></script>
+</body>
+</html>

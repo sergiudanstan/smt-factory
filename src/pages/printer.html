@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PRINTER — solder paste stencil printer · SMT line simulation</title>
+<link rel="stylesheet" href="../shell.css">
+<link rel="stylesheet" href="printer.css">
+</head>
+<body>
+<aside id="side"><div id="rail">
+  <button id="sideTgl" title="Show / hide panel"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  <button id="themeTgl" title="Switch White / Dark gray theme"><svg viewBox="0 0 24 24" id="themeIco"></svg></button>
+  <div class="vtxt">PRINTER</div></div>
+ <div id="sideBody">
+  <div class="fn">PRINTER</div><div class="fn-sub">Single-lane solder paste stencil printer feeding lane 1: vision alignment, closed-loop squeegees, automatic paste top-up, stencil underside cleaning, 2D inspection.</div>
+  <div class="sec"><h3>Theme</h3><div class="seg2"><button data-theme-btn="light">White</button><button data-theme-btn="dark">Dark gray</button></div></div>
+  <div class="sec"><h3>On-screen data</h3><label class="chk"><input type="checkbox" id="ovc-title" data-ovc="title" checked><span>Machine title</span></label><label class="chk"><input type="checkbox" id="ovc-cycle" data-ovc="cycle" checked><span>Cycle time</span></label><label class="chk"><input type="checkbox" id="ovc-hud" data-ovc="hud" checked><span>Status panel</span></label><label class="chk"><input type="checkbox" id="ovc-log" data-ovc="log" checked><span>Event log</span></label><label class="chk"><input type="checkbox" id="ovc-insets" data-ovc="insets" checked><span>Vision camera view</span></label><label class="chk"><input type="checkbox" id="ovc-hint" data-ovc="hint" checked><span>Mouse hint</span></label></div>
+  
+  <div class="sec"><h3>Machine</h3><table class="spec"><tr><td>Footprint</td><td>1180 × 1840 × 1606 mm</td></tr><tr><td>Lanes</td><td>1 (lane 1 of the line)</td></tr><tr><td>Print format</td><td>80 × 50 – 510 × 510 mm</td></tr><tr><td>Stencil</td><td>29" (736 mm) cast frame, mesh band, 0.13 mm foil</td></tr><tr><td>Board support</td><td>magnetic plate, 9 × 5 pins, snuggers + top foils</td></tr><tr><td>Table</td><td>X / Y / θ, 3 servos</td></tr><tr><td>Print speed</td><td>60 mm/s (1 – 300), stroke 240 mm</td></tr><tr><td>Squeegee</td><td>2 × metal blade 300 mm, 60°, 6.5 kg (64 N), load-cell loop</td></tr><tr><td>Print gap</td><td>0 (contact) · separation 2 mm @ 2 mm/s</td></tr><tr><td>Alignment</td><td>± 12.5 µm @ 6σ</td></tr><tr><td>Paste</td><td>bead Ø 15 mm, auto top-up, 600 g cartridge</td></tr><tr><td>Cleaner</td><td>paper roll, wet · dry · vacuum, 30 mm / wipe</td></tr><tr><td>2D inspection</td><td>4 regions, coverage %</td></tr><tr><td>Core cycle</td><td>≈ 15 s incl. alignment + 2D</td></tr><tr><td>Demo board</td><td>250 × 200 mm, 0.13 mm stencil</td></tr></table><p class="note">Paste consumption per print is computed from the pad apertures (area × 0.13 mm × 7.4 g/cm³ × 0.85); the simulation runs it ×16 so the top-up and the cartridge / paper alarms can be watched. Generic machine model. Dimensions follow published data for this machine class; units are millimetres, conveyor height 900 mm, boards flow left to right.</p></div>
+  <div class="sec"><h3>Position in the SMT line</h3><div class="flow"><span class="">LOADER</span><i>›</i><span class="me">PRINTER</span><i>›</i><span class="">SPI</span><i>›</i><span class="">PLACEMENT</span><i>›</i><span class="">REFLOW</span><i>›</i><span class="">AOI</span><i>›</i><span class="">UNLOADER</span></div></div>
+ </div></aside>
+<main id="stage"><canvas id="c"></canvas>
+<div id="title" class="panel" data-ov="title"><div class="t1">PRINTER</div><div class="t2">Single-lane solder paste stencil printer feeding lane 1: vision alignment, closed-loop squeegees, automatic paste top-up, stencil underside cleaning, 2D inspection.</div></div>
+<div id="cycle" class="panel" data-ov="cycle"><div class="k" id="cyK">CYCLE TIME</div><div class="v" id="cyV">—</div><div class="s" id="cyS"></div></div>
+<div id="hint" data-ov="hint">Drag = rotate · Wheel = zoom · Right-drag = pan · Click the hood to open it</div>
+<div id="hud" data-ov="hud" class="panel">
+  <h2>PRINT PROCESS</h2>
+  <div class="row"><span>Step</span><span id="hState" class="pill idle">IDLE</span></div>
+  <div class="row"><span>Detail</span><span id="phase">—</span></div>
+  <div class="row"><span>Sequence</span><span id="stepN" class="big">—</span></div>
+  <div class="bar"><i id="stepBar"></i></div>
+  <div class="row"><span>Squeegee pressure</span><span id="force">—</span></div>
+  <div class="row"><span>Print speed</span><span id="spd">—</span></div>
+  <div class="row"><span>Separation</span><span id="sepv">—</span></div>
+  <div class="row"><span>Measured X / Y / θ</span><span id="offs">—</span></div>
+  <div class="row"><span>Residual X / Y</span><span id="resv">—</span></div>
+  <div class="row"><span>Paste bead</span><span id="bead">—</span></div>
+  <div class="row"><span>Cartridge</span><span id="cart">—</span></div>
+  <div class="row"><span>USC paper</span><span id="paperP">—</span></div>
+  <div class="row"><span>SPI table bias X / Y</span><span id="biasv">—</span></div>
+  <div class="row"><span>Last 2D coverage</span><span id="cov2d">—</span></div>
+  <div class="row" style="margin-top:6px"><span>Boards printed</span><span id="nPr" class="big">0</span></div>
+  <div class="row"><span>Last cycle time</span><span id="ct">—</span></div>
+  <div class="row"><span>Prints since clean</span><span id="sc">0 / 5</span></div>
+  <div class="row"><span>Cleans / top-ups</span><span id="ncl">0</span></div>
+  <div id="log" data-ov="log"></div>
+</div>
+<div id="inset" data-ov="insets" class="panel inset"><div class="hd"><span><i id="rec"></i>VISION CAMERA · BOARD</span><b id="insL">LIVE</b></div><div class="cross"></div></div>
+<div id="insetS" data-ov="insets" class="panel inset"><div class="hd"><span><i class="rec"></i>VISION CAMERA · STENCIL</span><b id="insLS">LIVE</b></div><div class="cross"></div></div>
+<div id="bar" class="panel">
+  <button id="bHood">Open hood</button>
+  <button id="bXray">X-ray</button>
+  <button id="bSten">See-thru</button>
+  <button id="bLab">Labels</button>
+  <div class="sep"></div>
+  <button data-v="over" class="on">Overview</button>
+  <button data-v="inside">Inside</button>
+  <button data-v="head">Print head</button>
+  <button data-v="nest">Nest</button>
+  <button data-v="out">Output</button>
+  <button data-v="clean">Cleaner</button>
+  <button data-v="dispense">Dispenser</button>
+  <button data-v="top">Top</button>
+  <div class="sep"></div>
+  <button id="bPause">Pause</button>
+  <button data-s="0.5">0.5×</button>
+  <button data-s="1" class="on">1×</button>
+  <button data-s="2">2×</button>
+  <button data-s="4">4×</button>
+</div>
+<div id="tags"></div>
+</main>
+<script src="../shell.js"></script>
+<script src="../vendor/three.r147.min.js"></script>
+<script src="../vendor/OrbitControls.js"></script>
+<script src="../vendor/BufferGeometryUtils.js"></script>
+<script src="../pcbkit.js"></script>
+<script src="../core.js"></script>
+<script src="../line.js"></script>
+<script src="../machines/printer.js"></script>
+<script src="printer.page.js"></script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FACTORY PROPS — gallery · SMT line simulation</title>
+<link rel="stylesheet" href="../shell.css">
+</head>
+<body>
+<aside id="side"><div id="rail">
+  <button id="sideTgl" title="Show / hide panel"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  <button id="themeTgl" title="Switch White / Dark gray theme"><svg viewBox="0 0 24 24" id="themeIco"></svg></button>
+  <div class="vtxt">PROPS</div></div>
+ <div id="sideBody">
+  <div class="fn">FACTORY PROPS</div><div class="fn-sub">Gallery of every prop in src/factory/props.js — pallet racking, benches, storage, machines, personnel and mobile robots, arranged in three rows for visual verification.</div>
+  <div class="sec"><h3>Theme</h3><div class="seg2"><button data-theme-btn="light">White</button><button data-theme-btn="dark">Dark gray</button></div></div>
+  <p class="note">Every prop: millimetres, Y up, origin bottom centre on the floor, front facing +Z. Materials are shared across props (one cache). Moving props — person, AMR, forklift, pallet jack — expose userData hooks (legs / arms / leds / forks / top). Labels shows the tag overlay.</p>
+ </div></aside>
+<main id="stage"><canvas id="c"></canvas>
+<div id="tags"></div>
+<div id="bar" class="panel">
+  <button data-v="all" class="on">All</button>
+  <button data-v="row1">Row 1</button>
+  <button data-v="row2">Row 2</button>
+  <button data-v="row3">Row 3</button>
+  <button id="bLab">Labels</button>
+</div>
+</main>
+<script src="../shell.js"></script>
+<script src="../vendor/three.r147.min.js"></script>
+<script src="../vendor/OrbitControls.js"></script>
+<script src="../vendor/BufferGeometryUtils.js"></script>
+<script src="../pcbkit.js"></script>
+<script src="../core.js"></script>
+<script src="../line.js"></script>
+<script src="../factory/props.js"></script>
+<script src="props.page.js"></script>
+</body>
+</html>
