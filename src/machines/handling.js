@@ -10,7 +10,7 @@ function kit(C){
  if(C._hk)return C._hk;
  const {THREE,std,box,cyl,canvasTex,M,NOSH,FRAME}=C;
  const sh=(c,r=.55,m=.1)=>{const x=std(c,r,m);C.shellMats.push(x);return x;};
- const K=C._hk={W:sh(0xe9ebee,.5,.08),G:sh(0x3a3f46,.55,.2),G2:std(0x565c66,.5,.35),GL:sh(0x2b3a4a,.15,.6),GS:new THREE.MeshStandardMaterial({color:0x8fb0cc,roughness:.08,metalness:.1,transparent:true,opacity:.2,depthWrite:false}),ledgeGeo:new THREE.BoxGeometry(300,2.4,8),ledgeMat:M.alu,FR:std(0xc4cad1,.4,.75),BL:std(0x1e6fd9,.4,.1),
+ const K=C._hk={W:sh(0xe9ebee,.5,.08),G:sh(0x3a3f46,.55,.2),G2:std(0x565c66,.5,.35),GL:sh(0x1a242e,.84,.04),GS:sh(0x24303c,.8,.05),ledgeGeo:new THREE.BoxGeometry(300,2.4,8),ledgeMat:M.alu,FR:std(0xc4cad1,.4,.75),BL:std(0x1e6fd9,.4,.1),
   magM:std(0x24282e,.7,.1),boardMat:std(0x1b6a3b,.55,.2),boardGeo:new THREE.BoxGeometry(250,1.6,200),combs:{},NOSH};
  K.mv=function*(o,p,d){const a=o.position.clone();yield* C.tween(d,k=>{if(p.x!==undefined)o.position.x=a.x+(p.x-a.x)*k;if(p.y!==undefined)o.position.y=a.y+(p.y-a.y)*k;if(p.z!==undefined)o.position.z=a.z+(p.z-a.z)*k;});};
  K.par=function*(...gs){let n=gs.length;gs.forEach(g=>C.run((function*(){yield* g;n--;})()));while(n>0)yield FRAME;};
@@ -73,7 +73,7 @@ function foot(g,m){const a=m.log.find(e=>e.text.indexOf('ALARM')===0);g.font='50
 function handler(C,opts,kind){
  const K=kit(C),{THREE,box,cyl,label,plate,std,M,NOSH,FRAME,CONV_Y}=C;
  opts=opts||{};
- const LD=kind==='loader',s=LD?1:-1,X0=opts.x||0,ID=opts.id||kind,auto=opts.auto!==false,repAfter=opts.replenishAfter!==undefined?opts.replenishAfter:60,CAP=opts.slots||50,REL=opts.releaseInterval||6;
+ const LD=kind==='loader',s=LD?1:-1,X0=opts.x||0,ID=opts.id||kind,demo=opts.standalone===true,auto=opts.auto!==undefined?!!opts.auto:demo,repAfter=opts.replenishAfter!==undefined?opts.replenishAfter:60,CAP=opts.slots||50,REL=opts.releaseInterval||6;
  const HB=1250,HT=1490,L=s*40,P=x=>s*x,{W,G,G2,GL,FR,BL}=K;
  const ALM=()=>['MAGAZINE JAM','BOARD NOT AT STOPPER (T>5 s)','LIFT OVERTRAVEL','AIR PRESSURE LOW (<4.5 bar)'][C.rnd()*4|0],bpos=i=>L-s*340*i,opos=j=>L-s*340*(j+1),levelFor=n=>LD?900-(Y0+SLOT*(n-1)):900-(Y0+SLOT*n);
  const g=new THREE.Group();g.position.x=X0;C.parentFor(opts).add(g);
@@ -184,7 +184,7 @@ function handler(C,opts,kind){
    while(st.outBusy||C.T.sim<st.nextRel){if(st.outBusy)m.setState('BLOCKED','OUTFEED OCCUPIED','waiting for downstream');else m.setState('IDLE','RELEASE INTERVAL','max 1 board / '+REL+' s');yield FRAME;}
    const t0=C.T.sim;st.nextRel=t0+REL;m.endCycle(null,st.prevT0===null?t0-REL:st.prevT0);st.prevT0=t0;
    m.setState('RUN','PUSH BOARD','slot '+mg.n+' / '+CAP);
-   if(st.forceF||C.rnd()<.0015){st.forceF=false;yield* m.fault(ALM(),30+C.rnd()*60);}
+   if(st.forceF||(opts.faults&&C.rnd()<.0015)){st.forceF=false;yield* m.fault(ALM(),30+C.rnd()*60);}
    yield* K.mv(pusher,{x:L-127},.4);
    const b=new C.Board(1,m.world(L),m.line);if(opts.prepare)opts.prepare(b);mg.set(mg.n-1);st.outBusy=true;st.made++;m.counters.in++;m.boards.push(b);
    yield* C.tween(1.15,k=>{pusher.position.x=L-127+290*k;b.setX(m.world(pusher.position.x+126.5));});
@@ -199,7 +199,7 @@ function handler(C,opts,kind){
    if(mg.n>=mg.slots){st.ready=false;yield* ejectMag();continue;}
    st.ready=true;while(!st.pending){m.setState('STARVED','WAITING FOR BOARD','slot '+(mg.n+1)+' / '+CAP);yield FRAME;}
    const b=st.pending;st.ready=false;const t0=C.T.sim;m.setState('RUN','INSERT BOARD','slot '+(mg.n+1)+' / '+CAP);
-   if(st.forceF||C.rnd()<.0015){st.forceF=false;yield* m.fault(ALM(),30+C.rnd()*60);}
+   if(st.forceF||(opts.faults&&C.rnd()<.0015)){st.forceF=false;yield* m.fault(ALM(),30+C.rnd()*60);}
    yield* C.conveyTo(b,m.world(L-s*29),cb);
    mg.set(mg.n+1);m.release(b,1);m.line.finished(b);b.dispose();st.pending=null;st.stored++;m.endCycle(null,t0);
    if(mg.n<mg.slots)yield* K.mv(lift,{y:levelFor(mg.n)},.45);
@@ -221,7 +221,7 @@ function handler(C,opts,kind){
  const sv=(p,t,h)=>({p:[p[0]*s,p[1],p[2]],t:[t[0]*s,t[1],t[2]],hood:h});
  m.views={over:sv([-1900,1900,3300],[0,750,0]),lift:sv([700,1100,2900],[40,850,170],1),buffer:sv([-1100,1250,1500],[-380,600,-120],1),pusher:sv([-700,1250,1000],[-100,900,170],1),
   [LD?'out':'in']:sv([1100,1200,1000],[560,900,170]),low:sv([-500,520,1500],[-300,350,170]),top:sv([0,3800,260],[0,900,0],1)};
- m.setHood=o=>hoods.forEach(h=>h.target=o?1:0);
+ m.setHood=o=>hoods.forEach(h=>{h.target=o?1:0;h.open=h.target;h.upd(0);});
  C.tag(LD?'Magazine loader':'Magazine unloader',g,P(0),1520,0);C.tag('Lift (elevator)',lift,0,500,170);C.tag('Transfer pusher',xfer,0,UP+260,0);C.tag(LD?'Board pusher':'Board back-stop',pusher,0,950,LZ);
  C.tag('Upper magazine conveyor',g,bpos(1),UP+60,RZ);C.tag('Lower magazine conveyor',g,opos(0),LOWY+60,LZ);C.tag('Signal tower',g,P(735),HB+330,-440);C.tag('Operator panel',g,P(470),1300,545);
  C.dyn(lift,xfer,pusher,hA,...hoods.map(h=>h.pivot));if(pin)C.dyn(pin);
@@ -237,7 +237,7 @@ function BD2(C){return C.BD;}
 function splitter(C,opts,kind){
  const K=kit(C),{THREE,box,cyl,label,plate,std,M,NOSH,FRAME,CONV_Y,canvasTex}=C;
  opts=opts||{};
- const SH=kind==='shuttle',zs=SH?1:-1,X0=opts.x||0,ID=opts.id||kind,auto=opts.auto!==false;
+ const SH=kind==='shuttle',zs=SH?1:-1,X0=opts.x||0,ID=opts.id||kind,demo=opts.standalone===true,auto=opts.auto!==undefined?!!opts.auto:demo;
  const HH=1200,Z1=170,Z2=-170,ZN=zs*430,RX=380,RS=SH?10:20,PERIOD=SH?600:480,EX=550-EXIT;
  const lo=Math.min(Z2,ZN)-130,hi=Math.max(Z1,ZN)+130,zc=(lo+hi)/2,DX=-150;   /* DX: verification desk x (merge) */
  const {W,G,G2,GL,FR,BL}=K;
@@ -304,7 +304,7 @@ function splitter(C,opts,kind){
  const drawMon=()=>{if(!mon)return;const c=mon.ctx;c.fillStyle='#101418';c.fillRect(0,0,512,300);c.fillStyle='#e8edf2';c.font='600 20px Arial';c.textBaseline='middle';
   if(!ver){c.fillStyle='#8fa3bd';c.fillText('VERIFICATION STATION · idle',20,40);}
   else{c.fillText('NG #'+ver.i+' / '+ver.n+'  ·  verify',20,30);c.fillStyle='#187a36';c.fillRect(60,60,392,200);c.fillStyle='#0d4f22';for(let k=0;k<30;k++)c.fillRect(80+(k*37)%350,75+(k*53)%160,24,12);
-   const px=100+ver.pos[0]*300,py=90+ver.pos[1]*140;c.lineWidth=5;c.strokeStyle=ver.real?'#ff3a3a':'#3ddc84';c.beginPath();c.arc(px,py,26,0,7);c.stroke();c.fillStyle=ver.real?'#ff6b6b':'#3ddc84';c.font='700 22px Arial';c.fillText(ver.real?'REAL DEFECT':'FALSE CALL',20,282);}
+   const px=100+ver.pos[0]*300,py=90+ver.pos[1]*140,lab=ver.real?'REAL DEFECT':ver.fc?'FALSE CALL':'UNVERIFIED';c.lineWidth=5;c.strokeStyle=ver.real?'#ff3a3a':ver.fc?'#3ddc84':'#f0b040';c.beginPath();c.arc(px,py,26,0,7);c.stroke();c.fillStyle=ver.real?'#ff6b6b':ver.fc?'#3ddc84':'#f0b040';c.font='700 22px Arial';c.fillText(lab,20,282);}
   mon.tex.needsUpdate=true;};
  /* ---- tower, e-stops, HMI, SMEMA ---- */
  const tw=K.tower(g,-520,HH,-620);K.estop(g,-535,1040,655,0);K.estop(g,535,1040,655,0);
@@ -321,8 +321,9 @@ function splitter(C,opts,kind){
   if(!SH)c.fillText('Real '+st.real+'  False calls '+st.fc,10,182);else c.fillText('Emptied '+st.svc+'x ('+st.rejTotal+')',10,182);foot(c,m);});
  function* segTo(z,b){const a=seg.position.z,d=Math.abs(z-a);if(d<1)return;st.moving=true;m.setState('RUN','TRANSLATE','segment -> z '+z);yield* C.tween(.3+d/700,k=>{seg.position.z=a+(z-a)*k;if(b)b.setZ(seg.position.z);});seg.position.z=z;if(b)b.setZ(z);st.moving=false;}
  const rm=b=>{const i=m.boards.indexOf(b);if(i>=0)m.boards.splice(i,1);};
- function* storeNG(b){yield* C.conveyTo(b,m.world(360),bt);const real=(b.aoi&&b.aoi.real!==undefined)?b.aoi.real:b.defects.length>0;st.ngList.push(real);rackMag.set(rackMag.n+1);b.dispose();rm(b);st.rackN++;m.counters.ng++;if(st.rackN>=RS)st.fullT=C.T.sim;
-  m.addLog((SH?'SPI NG rejected':'AOI NG buffered')+' #'+b.sn+' ('+st.rackN+'/'+RS+')','ng');}
+ function ngClass(b){const a=b.aoi;if(a){if((a.real>0)||(a.detected>0))return 'real';if(a.falseCalls>0)return 'fc';return 'plain';}return (b.defects&&b.defects.length)?'real':'plain';}
+ function* storeNG(b){yield* C.conveyTo(b,m.world(360),bt);st.ngList.push(ngClass(b));rackMag.set(rackMag.n+1);b.dispose();rm(b);st.rackN++;m.counters.ng++;if(st.rackN>=RS)st.fullT=C.T.sim;
+  m.addLog((SH?'SPI NG rejected':(b.aoi?'AOI NG buffered':'NG buffered'))+' #'+b.sn+' ('+st.rackN+'/'+RS+')','ng');}
  function* shuttleMain(){for(;;){
   while(!st.cur){m.setState('STARVED','WAITING FOR BOARD','input lane 1');yield FRAME;}
   const b=st.cur,t0=b.tIn;let lane=0;
@@ -331,8 +332,8 @@ function splitter(C,opts,kind){
    yield* K.par(segTo(Z1),K.mv(rackY,{y:rackLevel(st.rackN)},.5));continue;}
   while(!lane){const free=[1,2].filter(l=>!m.outQ[l]);if(free.length){const rdy=free.filter(l=>{const P=partner(l);return P&&P.canAccept(l,b);}),c=rdy.length?rdy:free;lane=c.length>1?(st.last===1?2:1):c[0];}
    else{m.setState('BLOCKED','BOTH OUTPUTS OCCUPIED','waiting for downstream');yield FRAME;}}
-  m.setState('RUN','DISPATCH','lane '+lane);yield* segTo(Zl(lane),b);
-  if(m.outQ[lane]){const o=lane===1?2:1;if(!m.outQ[o]){lane=o;yield* segTo(Zl(o),b);}else while(m.outQ[lane])yield FRAME;}   /* re-check on arrival */
+  m.setState('RUN','DISPATCH','lane '+lane);b.setLane(lane,false);yield* segTo(Zl(lane),b);
+  if(m.outQ[lane]){const o=lane===1?2:1;if(!m.outQ[o]){lane=o;b.setLane(lane,false);yield* segTo(Zl(o),b);}else while(m.outQ[lane])yield FRAME;}   /* re-check on arrival */
   let done=false;C.run((function*(){yield* C.conveyTo(b,m.world(EX),bt);done=true;})());
   while(!done&&b.x<m.world(365))yield FRAME;
   yield* segTo(Z1);while(!done)yield FRAME;   /* the segment returns while the board is still running off */
@@ -344,20 +345,20 @@ function splitter(C,opts,kind){
   yield* segTo(Zl(lane));pins[lane].userData.up=false;yield .2;
   m.setState('RUN','TRANSFER ONTO SEGMENT','lane '+lane);yield* C.conveyTo(b,m.world(0),bt);st.entry[lane]=null;pins[lane].userData.up=true;
   if(ng){yield* segTo(ZN,b);m.setState('RUN','NG TO BUFFER','');yield* storeNG(b);rm(b);m.endCycle(b,t0);yield* K.mv(rackY,{y:rackLevel(st.rackN)},.5);}
-  else{yield* segTo(Z1,b);yield* C.conveyTo(b,m.world(EX),bt);b.setLane(1);m.setReady(b,1);m.endCycle(b,t0);}}}
+  else{b.setLane(1,false);yield* segTo(Z1,b);yield* C.conveyTo(b,m.world(EX),bt);b.setLane(1);m.setReady(b,1);m.endCycle(b,t0);}}}
  m.canAccept=SH?(()=>!m.down&&!st.cur&&!st.inc&&!st.moving&&Math.abs(seg.position.z-Z1)<1):(l=>!m.down&&!st.entry[l]&&!st.inc[l]);
  m.onAccept=SH?(b=>{st.inc=true;C.run((function*(){yield* C.conveyTo(b,m.world(0),bt);st.inc=false;st.cur=b;})());}):((b,l)=>{st.inc[l]=true;C.run((function*(){yield* C.conveyTo(b,m.world(-EX),bt);st.inc[l]=false;st.entry[l]=b;})());});
  m.onRelease=(b,l)=>{const p=pinsOut[l];p.userData.up=false;bt.moving++;C.run((function*(){yield 1.6;bt.moving--;p.userData.up=true;})());};
  function* serveRack(){const n=st.rackN,list=st.ngList.slice(),ry=zs>0?0:PI;st.busy=true;door.target=1;C.run(K.serve(op,RX,zs*800,ry,3));yield 2.6;rackMag.set(0);
   st.ngList=[];st.rackN=0;st.fullT=null;st.lastSvc=C.T.sim;st.svc++;st.rejTotal+=n;yield* K.mv(rackY,{y:rackLevel(0)},.8);yield 3;door.target=0;
   if(SH){m.addLog('Operator emptied reject rack ('+n+' boards)','ok');}
-  else{const real=list.filter(Boolean).length,fc=n-real,per=Math.min(30,4+n*1.3)/Math.max(1,n);
+  else{const real=list.filter(x=>x==='real').length,fc=list.filter(x=>x==='fc').length,plain=n-real-fc,per=Math.min(30,4+n*1.3)/Math.max(1,n);
    C.run(K.serve(op,DX,-1080,PI,per*n+.5));yield 1.4;fix.visible=true;
-   for(let i=0;i<n;i++){ver={i:i+1,n,real:list[i],pos:[C.rnd(),C.rnd()]};drawMon();yield per;}
-   ver=null;fix.visible=false;drawMon();st.real+=real;st.fc+=fc;m.addLog('Operator verified '+n+' NG: '+real+' real, '+fc+' false calls','ok');yield 1.6;}
+   for(let i=0;i<n;i++){ver={i:i+1,n,real:list[i]==='real',fc:list[i]==='fc',pos:[C.rnd(),C.rnd()]};drawMon();yield per;}
+   ver=null;fix.visible=false;drawMon();st.real+=real;st.fc+=fc;m.addLog('Operator verified '+n+' NG: '+real+' real, '+fc+' false calls'+(plain?', '+plain+' unverified':''),'ok');yield 1.6;}
   st.busy=false;}
  m.emptyRack=()=>st.rackN>0&&!st.busy?C.run(serveRack()):0;
- if(auto)C.run((function*(){for(;;){yield 5;if(!st.busy&&st.rackN>0&&(C.T.sim-st.lastSvc>=PERIOD||(st.rackN>=RS&&C.T.sim-st.fullT>=20)))yield* serveRack();}})());
+ if(auto)C.run((function*(){yield PERIOD+180;for(;;){if(!st.busy&&st.rackN>0&&(C.T.sim-st.lastSvc>=PERIOD||(st.fullT&&st.rackN>=RS&&C.T.sim-st.fullT>=20)))yield* serveRack();yield 5;}})());
  m.update=(dt,rdt)=>{
   C.tower(m,tw,st.rackN>=RS-1);hood.upd(rdt);door.open+=(door.target-door.open)*Math.min(1,(rdt||0)*3);door.rotation.y=-zs*door.open*1.4;
   const zB=seg.position.z,D=(zB-zA)*zs,F=zA+zs*((LC+D)/2),l1=Math.max(1,Math.abs(F-zA)),l2=Math.max(1,Math.abs(F-zB));
@@ -366,8 +367,9 @@ function splitter(C,opts,kind){
  C.onSlow(()=>{if(m.near)hmi.redraw();});drawMon();
  m.info=()=>[['State',m.state+' · '+m.step],['Detail',m.detail||'—'],['Boards in',m.counters.in],['Boards out',m.counters.out],[SH?'Rejected (SPI NG)':'NG buffered',m.counters.ng],[SH?'Reject rack':'NG buffer',st.rackN+' / '+RS],
   [SH?'Rack emptied':'Verified (real / false call)',SH?st.svc+'x ('+st.rejTotal+')':st.real+' / '+st.fc],['Segment z',Math.round(seg.position.z)+' mm'],['Cycle',m.avgCt()?m.avgCt().toFixed(1)+' s':'—'],['Alarms',m.faults||0]];
- m.views={over:{p:[-1500,1800,3200],t:[0,700,0]},seg:{p:[500,1350,1300],t:[0,880,0],hood:1},drive:{p:[-900,1500,1400*zs],t:[0,800,-250*zs],hood:1},[SH?'reject':'ngbuf']:{p:[1000,1600,1700*zs],t:[RX,900,ZN],hood:1},top:{p:[0,3700,200],t:[0,900,0],hood:1},out:{p:[1200,1200,1000],t:[500,900,0]}};
- m.setHood=o=>{hood.target=o?1:0;};
+ m.views={over:{p:[-1500,1800,3200],t:[0,700,0]},seg:{p:[500,2600,1500],t:[0,880,0],hood:1},drive:{p:[350,2200,1700*zs],t:[0,830,mz],hood:1},[SH?'reject':'ngbuf']:{p:[780,1500,zs*1350],t:[RX,930,ZN],hood:zs>0?1:0,door:1},top:{p:[0,3700,200],t:[0,900,0],hood:1},out:{p:[1200,1200,1000],t:[500,900,0]}};
+ m.setHood=o=>{hood.target=o?1:0;hood.open=hood.target;hood.upd(0);};
+ m.setDoor=o=>{door.target=o?1:0;door.open=door.target;door.rotation.y=-zs*door.open*1.4;};
  C.tag(SH?'Lane shuttle':'Lane merge',g,0,1300,0);C.tag('Translating conveyor segment',seg,0,950,0);C.tag('Linear guide + servo belt drive',g,0,830,mz+100);C.tag('Cable chain',g,300,820,zc);C.tag(SH?'NG reject rack (10 slots)':'NG buffer magazine (20 slots)',rackY,0,200,0);C.tag('Signal tower',g,-520,HH+330,-620);C.tag('Operator panel',g,-420,1250,690);
  C.dyn(seg,chA,chB,chF,rackY,hp,door,...(fix?[fix]:[]),pinsOut[1],pinsOut[2],pins[1],pins[2]);
  C.bake(g);
@@ -383,7 +385,7 @@ function conveyorMod(C,opts){
  const len=opts.length||1200,lanes=opts.lanes||[1],insp=!!opts.inspection,X0=opts.x||0,ID=opts.id||'conveyor';
  const {W,G,G2,FR,BL}=K,LZs=lanes.map(l=>l===1?170:-170),zf=Math.max(...LZs)+135,zr=Math.min(...LZs)-135,zm=(zf+zr)/2,exitX=len/2-EXIT;
  const g=new THREE.Group();g.position.x=X0;C.parentFor(opts).add(g);
- const bl={},pins={},sens={},ls={},DW=opts.dwell||[12,25],CAPL=insp?2:1;
+ const bl={},pins={},sens={},ls={},DW=opts.dwell||[.45,.8],CAPL=1;
  /* frame */
  [-len/2+70,len/2-70].forEach(x=>{[zf,zr].forEach(z=>{box(g,40,CONV_Y-60-30,40,G2,x,(CONV_Y-60+30)/2,z);cyl(g,30,30,16,M.steel,x,8,z,{seg:20});});box(g,30,30,zf-zr,G2,x,300,zm);});
  [zf,zr].forEach(z=>{box(g,len-160,30,30,G2,0,300,z);box(g,len-100,60,8,W,0,820,z+(z>zm?-33:33),NOSH);});
@@ -426,7 +428,7 @@ function conveyorMod(C,opts){
   lanes.forEach(l=>{const bs=ls[l].list;sens[l].forEach(s=>{s.mt.emissiveIntensity=bs.some(b=>Math.abs(b.x-m.world(s.x))<130)?1.8:.05;});const li=bs.some(b=>b._ph==='INSPECT');if(li)on=true;if(ringM[l])ringM[l].emissiveIntensity=li?2.2:.2;});
   lightM.emissiveIntensity=on?1.6:.25;smI.a.emissiveIntensity=smO.a.emissiveIntensity=m.state==='RUN'?1.8:.05;smO.b.emissiveIntensity=m.state==='BLOCKED'?1.4:.05;smI.b.emissiveIntensity=m.state==='STARVED'?1.4:.05;};
  m.info=()=>[['State',m.state+' · '+m.step],['Boards in',m.counters.in],['Boards out',m.counters.out],['Lane 1',ls[1]?(ls[1].list.length?ls[1].list.map(b=>'#'+b.sn+' '+b._ph).join(', '):'free'):'—'],['Lane 2',ls[2]?(ls[2].list.length?ls[2].list.map(b=>'#'+b.sn+' '+b._ph).join(', '):'free'):'—'],['Inspected',st.insp],['Last dwell',insp&&st.dwell?st.dwell.toFixed(0)+' s':'—']];
- m.views={over:{p:[-900,1600,2300],t:[0,950,0]},lamp:{p:[600,1450,1100],t:[0,1050,0]},rails:{p:[-len/2+500,1000,900],t:[-len/2+60,820,zm]},out:{p:[len/2+300,1200,900],t:[len/2-150,900,0]}};
+ m.views={over:{p:[-1800,2000,2600],t:[0,820,0]},lamp:{p:[700,1700,1400],t:[0,1050,0]},rails:{p:[-len/2+500,1000,900],t:[-len/2+60,820,zm]},out:{p:[len/2+300,1200,900],t:[len/2-150,900,0]}};
  m.setHood=()=>{};
  C.tag(insp?'Inspection conveyor':'Conveyor',g,0,insp?1500:1000,0);C.tag('Width adjustment',g,-len/2+30,CONV_Y-60,zf+80);C.tag('Board sensor',g,exitX+160,CONV_Y+20,zf-120);C.tag('SMEMA box',g,len/2-110,860,zf+14);if(insp)C.tag('Work light',g,0,1440,zm);
  C.dyn(pins[1],pins[2]);C.bake(g);

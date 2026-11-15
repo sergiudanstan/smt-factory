@@ -354,8 +354,11 @@ function measure(b){
   const sp=b.spi||(b.spi={}),flagged=!!sp.printerFlag||st.forceFlag>0;
   if(st.forceFlag>0&&!sp.printerFlag){sp.printerFlag='INSUFFICIENT PASTE';sp.region='U2';}
   if(st.forceFlag>0)st.forceFlag--;
-  st.drift.x+=gauss()*7+1.2;st.drift.y+=gauss()*5-.4;
-  const off={x:st.drift.x+gauss()*4,y:st.drift.y+gauss()*4},bg=1+gauss()*.012;
+  /* print offset = bounded process drift (mean-reverting around a systematic stencil/board offset) + the printer's SPI-fed table bias */
+  if(!st.drift0)st.drift0={x:st.drift.x,y:st.drift.y};
+  st.drift.x+=(st.drift0.x-st.drift.x)*.04+gauss()*5;st.drift.y+=(st.drift0.y-st.drift.y)*.04+gauss()*4;
+  const prn=m.line.machines.find(x=>x.kind==='printer'),pb=prn&&prn.st&&prn.st.bias?prn.st.bias:[0,0];
+  const off={x:st.drift.x+pb[0]+gauss()*4,y:st.drift.y+pb[1]+gauss()*4},bg=1+gauss()*.012;
   const aff=new Set();
   if(flagged){let reg=ALIAS[sp.region]||sp.region||'';PADS.forEach((p,i)=>{if(regionOf(p)===reg)aff.add(i);});
     if(!aff.size){reg=regionOf(PADS[Math.floor(Math.random()*NP)]);PADS.forEach((p,i)=>{if(regionOf(p)===reg)aff.add(i);});sp.region=reg;}}

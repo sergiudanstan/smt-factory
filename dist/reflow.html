@@ -3466,7 +3466,7 @@ C.onTick(h=>{
 });
 m.canAccept=lane=>{if(m.down||blockFlag)return false;const q=Q[lane],l=q[q.length-1];if(!l)return true;if(l.rf.ph==='in')return false;return l.rf.lx-X0>=BW+80+(l.rf.prof?130:0);};
 m.onAccept=(b,lane)=>{const R=C.rnd,tl=Q[lane];
-  const r=b.rf={lane,ph:'in',lx:0,T:AMB-2+R()*4,t:0,tau:33*(.93+.14*R()),peak:0,tal:0,ramp:0,cool:0,hist:[],liq:false,prof:false,def:R()<.04,defDone:false,rdy:false,t0:C.T.sim,ov:mkOverlay(b)};
+  const r=b.rf={lane,ph:'in',lx:0,T:AMB-2+R()*4,t:0,tau:33*(.93+.14*R()),peak:0,tal:0,ramp:0,cool:0,hist:[],liq:false,prof:false,def:R()<(opts.defectRate!==undefined?opts.defectRate:.04),defDone:false,rdy:false,t0:C.T.sim,ov:mkOverlay(b)};
   if(profWait){profWait=false;r.prof=true;profKit(b);nProf++;m.addLog('SETUP  thermal profiling run — profiler on lane '+lane,'cl');}
   const gw=b.g.getWorldPosition;b.g.getWorldPosition=function(t){gw.call(this,t);if(r.simple)t.y+=30000;return t;};   /* oven boards switch to the single-box LOD at 2.4 m (line.js LOD sees them 'far') */
   tl.push(b);

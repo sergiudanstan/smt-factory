@@ -42,7 +42,9 @@ C.onHud(()=>{
   // Place order can differ from the job order, so derive completed parts from executed events.
   const done=new Set(h.schedule.slice(0,h.idx).filter(s=>s.kind==='place').map(s=>s.p.job));
   if(s.kind==='place'&&h.time>=(s.t0+s.t1)/2)done.add(s.p.job);
-  m.job.forEach(p=>{g.fillStyle=done.has(p)?colors[p.kind]:'rgba(205,187,134,.45)';g.fillRect((p.u+.125-p.hw)*2000,(.1-p.v-p.hh)*2000,Math.max(3,p.hw*4000),Math.max(3,p.hh*4000));});
+  m.job.forEach(p=>{const x=(p.u+.125-p.hw)*2000,y=(.1-p.v-p.hh)*2000,w=Math.max(3,p.hw*4000),hh=Math.max(3,p.hh*4000),on=done.has(p);
+   g.fillStyle=on?colors[p.kind]:'rgba(205,187,134,.45)';g.fillRect(x,y,w,hh);
+   if(on){g.strokeStyle='rgba(255,255,255,.6)';g.lineWidth=1;g.strokeRect(x+.5,y+.5,w-1,hh-1);}});   /* placed parts outlined, as in the original */
  });
  put('s-out',m.counters.out);put('s-cph',Math.round(m.stats.placed/Math.max(1,C.T.sim)*3600).toLocaleString());
  put('s-cycle','last '+m.ct.toFixed(1)+' s');put('live-sub',m.state);

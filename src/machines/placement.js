@@ -830,8 +830,11 @@ function setCovers(mode){
 }
 function setDoor(i,on){Zi[i].open=!!on;}
 m.update=(dt,rdt)=>{
+  // Iso sits ~5 m out. Individual parts and the head interior are invisible there and were the draw-call overrun.
+  const detail=m.camDist<3800;
   heads.forEach(h=>{
     const p=pose(h);h.pose=p;const g=sd[h.i];g.g.position.set(p.x,p.y,0);g.beam.position.y=p.y;
+    g.g.visible=detail||covers!=='solid';
     g.noz.forEach((o,k)=>{
       const part=h.holding[k],index=h.i*16+k;
       if(part)h.theta[k]=part.rot*_s(Yi((h.time-h.pickedAt[k])/.2,0,1));
@@ -852,13 +855,13 @@ m.update=(dt,rdt)=>{
     boardVisionMats[h.i].emissiveIntensity=p.seg.kind==='fiducial'&&p.f>.25&&p.f<.75?3:.05;
     [-470,0,470].forEach((x,k)=>putInstance(sensorLeds,h.i*3+k,x,894,C.LANE_Z[h.i]+114,1,1,1,0,0,
       [h.queue&&Math.abs(h.queue.x-m.world(-470))<10,h.work&&Math.abs(h.work.x-m.world(0))<10,h.out&&Math.abs(h.out.x-m.world(470))<10][k]?0x2eff65:0x292c28));
-    h.parts.forEach(o=>{o.visible=m.near&&!!(h.work&&o.parent===h.work.parts);});
+    h.parts.forEach(o=>{o.visible=detail&&!!(h.work&&o.parent===h.work.parts);});
     g.path.visible=pathEnabled&&m.near;
     if(g.path.visible&&(g.shown!==p.seg.trip||g.path.userData.schedule!==h.schedule)){
       g.shown=p.seg.trip;g.path.userData.schedule=h.schedule;g.path.geometry.dispose();
       g.path.geometry=new Zt().setFromPoints(h.schedule.filter(s=>s.trip===p.seg.trip).flatMap(s=>[new R(...s.a,0),new R(...s.b,0)]));
     }
-    feeders[h.i].forEach(f=>{const k=Yi((C.T.sim-f.lastPick)/.12,0,1);f.mesh.visible=m.near&&k>.15&&f.qty>0;f.mesh.position.copy(xs(f.x,f.y+h.side*(1-_s(k))*f.pitch,f.z));});
+    feeders[h.i].forEach(f=>{const k=Yi((C.T.sim-f.lastPick)/.12,0,1);f.mesh.visible=detail&&k>.15&&f.qty>0;f.mesh.position.copy(xs(f.x,f.y+h.side*(1-_s(k))*f.pitch,f.z));});
   });
   for(let i=0;i<120;i++){
     const h=i<60?0:1,slot=i%60,f=reels[h][slot],side=h?1:-1;
@@ -867,9 +870,10 @@ m.update=(dt,rdt)=>{
     detailDummy.scale.set(1,1,1);detailDummy.rotation.set(side*advance/.09,0,0);detailDummy.updateMatrix();reelSpokes.setMatrixAt(i,detailDummy.matrix);
     for(let j=0;j<5;j++)putInstance(tapeIndices,i*5+j,Og(slot)-.0052,side*(.462+j*.004+(advance%.004)),.9007);
   }
-  [tapeIndices,reelSpokes,vacuumLeds,thetaMarks,carryBody,carryTerminals,sensorLeds].forEach(mesh=>{
-    mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;mesh.visible=m.near;
+  [tapeIndices,reelSpokes,vacuumLeds,thetaMarks,carryBody,carryTerminals].forEach(mesh=>{
+    mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;mesh.visible=detail;
   });
+  sensorLeds.instanceMatrix.needsUpdate=true;if(sensorLeds.instanceColor)sensorLeds.instanceColor.needsUpdate=true;sensorLeds.visible=m.near;
   Zi.forEach(d=>{d.a+=((d.open?1:0)-d.a)*Math.min(1,(rdt||dt)*6);d.g.rotation.x=-1.25*_s(Yi(d.a,0,1));});
   C.tower(m,{r:ct.lampR,y:ct.lampY,g:ct.lampG},feeders.some(row=>row.some(f=>f.low)));
 };
@@ -913,7 +917,8 @@ if(opts.standalone){
       if(k==='pickf'||k==='pickr'){
         const h=heads[k==='pickr'?1:0],offset=new R(h.side*160,130,-h.side*360);
         const target=new R(),position=new R();
-        const destination=()=>{const p=pose(h);target.copy(m.origin()).add(xs(p.x,p.y,.95));position.copy(target).add(offset);};
+        const destination=()=>{const p=pose(h),o=m.origin();target.copy(o).add(xs(p.x,p.y,.95));position.copy(target).add(offset);
+          position.x=Math.min(o.x+560,Math.max(o.x-560,position.x));};   /* keep the camera inside the side covers (x = +/-645) */
         destination();C.flyTo(position.toArray(),target.toArray());
         return rdt=>{destination();const alpha=1-Math.exp(-8*Math.max(0,rdt));
           C.camera.position.lerp(position,alpha);C.controls.target.lerp(target,alpha);};

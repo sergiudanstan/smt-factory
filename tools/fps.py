@@ -14,10 +14,11 @@ async def main(a):
         await pg.goto(pathlib.Path(a.page).resolve().as_uri()); await pg.wait_for_timeout(a.wait)
         r = await pg.evaluate("() => { const c = document.createElement('canvas').getContext('webgl'); const d = c && c.getExtension('WEBGL_debug_renderer_info'); return d ? c.getParameter(d.UNMASKED_RENDERER_WEBGL) : 'unknown'; }")
         print('renderer:', r)
+        if a.speed: await pg.evaluate(f"() => __sim.setSpeed({a.speed})")
         for v in (a.views or 'plant').split(','):
             await pg.evaluate(f"() => {{ __sim.setView && __sim.setView({json.dumps(v)}); __sim.snapCam && __sim.snapCam(); }}")
             await pg.wait_for_timeout(800)
             print(v, await pg.evaluate(FPS_JS))
         print('errors:', len(errs), errs[:3]); await b.close()
-ap = argparse.ArgumentParser(); ap.add_argument('page'); ap.add_argument('--views'); ap.add_argument('--wait', type=int, default=12000)
+ap = argparse.ArgumentParser(); ap.add_argument('page'); ap.add_argument('--views'); ap.add_argument('--wait', type=int, default=12000); ap.add_argument('--speed', type=float, default=0)
 asyncio.run(main(ap.parse_args()))

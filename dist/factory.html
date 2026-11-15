@@ -131,12 +131,12 @@ button{font-family:inherit}
 .plog div{font-family:Consolas,Menlo,monospace;font-size:10.5px;padding:1.5px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--mut)}
 .plog div b{color:var(--tx);font-weight:600}.plog .ng{color:var(--ng)}.plog .ok{color:var(--ok)}.plog .cl{color:var(--warn)}
 /* machine inspector */
-#hud{width:340px;max-height:calc(100% - var(--barH,46px) - 40px);overflow:hidden;display:flex;flex-direction:column}
+#hud{width:340px;max-height:calc(100% - var(--barH,46px) - 300px);overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;scrollbar-width:thin}
 #hud .mh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
 #hud .mh b{font-size:15px;font-weight:900;letter-spacing:.06em}
 #hud .msub{color:var(--mut);font-size:11px;margin-bottom:6px}
 #mrows .row{padding:2px 0;font-size:12px}#mrows .row span:last-child{font-family:Consolas,Menlo,monospace;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
-#minset{position:relative;height:200px;margin-top:8px;border:1px solid color-mix(in srgb,var(--cy) 45%,transparent);border-radius:8px;overflow:hidden;flex:none}
+#minset{position:relative;height:170px;margin-top:8px;border:1px solid color-mix(in srgb,var(--cy) 45%,transparent);border-radius:8px;overflow:hidden;flex:none}
 #minset .hd{position:absolute;left:0;right:0;top:0;height:24px;background:var(--hd);display:flex;align-items:center;justify-content:space-between;padding:0 9px;font-size:11px;letter-spacing:.8px;color:var(--cy)}
 #minset.none{display:none}
 #hud .acts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
@@ -154,7 +154,8 @@ button{font-family:inherit}
 #loading{position:absolute;inset:0;display:grid;place-items:center;background:color-mix(in srgb,var(--scene) 88%,transparent);z-index:20;font-size:14px;color:var(--tx);text-align:center;letter-spacing:.04em}
 #loading small{display:block;color:var(--mut);margin-top:6px;font-size:12px}
 #loading.done{display:none}
-@media (max-width:1300px){#gantt{right:12px;height:150px}#map{display:none}}
+@media (max-width:1400px){#title{display:none}#cycle{left:12px;transform:none}}
+@media (max-width:1300px){#gantt{right:12px;height:150px}#map{display:none}#hud{max-height:calc(100% - var(--barH,46px) - 200px)}#minset{height:150px}}
 @media (max-width:1000px){#gantt{display:none}#hud{width:280px}}
 #hud .mviews{margin-top:6px}#hud .mviews button{padding:3px 7px;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em}
 
@@ -198,7 +199,9 @@ button{font-family:inherit}
   <button data-v="postsmt">Post-SMT</button>
   <button data-v="offices">Offices</button>
   <button data-v="utility">Utility</button>
+  <button data-v="entrance">ESD entrance</button>
   <button data-v="walk">Walk</button>
+  <button data-v="tour">Tour</button>
   <div class="sep"></div>
   <button id="bLab">Labels</button>
   <button id="bXray">X-ray covers</button>
@@ -4748,8 +4751,11 @@ function setCovers(mode){
 }
 function setDoor(i,on){Zi[i].open=!!on;}
 m.update=(dt,rdt)=>{
+  // Iso sits ~5 m out. Individual parts and the head interior are invisible there and were the draw-call overrun.
+  const detail=m.camDist<3800;
   heads.forEach(h=>{
     const p=pose(h);h.pose=p;const g=sd[h.i];g.g.position.set(p.x,p.y,0);g.beam.position.y=p.y;
+    g.g.visible=detail||covers!=='solid';
     g.noz.forEach((o,k)=>{
       const part=h.holding[k],index=h.i*16+k;
       if(part)h.theta[k]=part.rot*_s(Yi((h.time-h.pickedAt[k])/.2,0,1));
@@ -4770,13 +4776,13 @@ m.update=(dt,rdt)=>{
     boardVisionMats[h.i].emissiveIntensity=p.seg.kind==='fiducial'&&p.f>.25&&p.f<.75?3:.05;
     [-470,0,470].forEach((x,k)=>putInstance(sensorLeds,h.i*3+k,x,894,C.LANE_Z[h.i]+114,1,1,1,0,0,
       [h.queue&&Math.abs(h.queue.x-m.world(-470))<10,h.work&&Math.abs(h.work.x-m.world(0))<10,h.out&&Math.abs(h.out.x-m.world(470))<10][k]?0x2eff65:0x292c28));
-    h.parts.forEach(o=>{o.visible=m.near&&!!(h.work&&o.parent===h.work.parts);});
+    h.parts.forEach(o=>{o.visible=detail&&!!(h.work&&o.parent===h.work.parts);});
     g.path.visible=pathEnabled&&m.near;
     if(g.path.visible&&(g.shown!==p.seg.trip||g.path.userData.schedule!==h.schedule)){
       g.shown=p.seg.trip;g.path.userData.schedule=h.schedule;g.path.geometry.dispose();
       g.path.geometry=new Zt().setFromPoints(h.schedule.filter(s=>s.trip===p.seg.trip).flatMap(s=>[new R(...s.a,0),new R(...s.b,0)]));
     }
-    feeders[h.i].forEach(f=>{const k=Yi((C.T.sim-f.lastPick)/.12,0,1);f.mesh.visible=m.near&&k>.15&&f.qty>0;f.mesh.position.copy(xs(f.x,f.y+h.side*(1-_s(k))*f.pitch,f.z));});
+    feeders[h.i].forEach(f=>{const k=Yi((C.T.sim-f.lastPick)/.12,0,1);f.mesh.visible=detail&&k>.15&&f.qty>0;f.mesh.position.copy(xs(f.x,f.y+h.side*(1-_s(k))*f.pitch,f.z));});
   });
   for(let i=0;i<120;i++){
     const h=i<60?0:1,slot=i%60,f=reels[h][slot],side=h?1:-1;
@@ -4785,9 +4791,10 @@ m.update=(dt,rdt)=>{
     detailDummy.scale.set(1,1,1);detailDummy.rotation.set(side*advance/.09,0,0);detailDummy.updateMatrix();reelSpokes.setMatrixAt(i,detailDummy.matrix);
     for(let j=0;j<5;j++)putInstance(tapeIndices,i*5+j,Og(slot)-.0052,side*(.462+j*.004+(advance%.004)),.9007);
   }
-  [tapeIndices,reelSpokes,vacuumLeds,thetaMarks,carryBody,carryTerminals,sensorLeds].forEach(mesh=>{
-    mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;mesh.visible=m.near;
+  [tapeIndices,reelSpokes,vacuumLeds,thetaMarks,carryBody,carryTerminals].forEach(mesh=>{
+    mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;mesh.visible=detail;
   });
+  sensorLeds.instanceMatrix.needsUpdate=true;if(sensorLeds.instanceColor)sensorLeds.instanceColor.needsUpdate=true;sensorLeds.visible=m.near;
   Zi.forEach(d=>{d.a+=((d.open?1:0)-d.a)*Math.min(1,(rdt||dt)*6);d.g.rotation.x=-1.25*_s(Yi(d.a,0,1));});
   C.tower(m,{r:ct.lampR,y:ct.lampY,g:ct.lampG},feeders.some(row=>row.some(f=>f.low)));
 };
@@ -4831,7 +4838,8 @@ if(opts.standalone){
       if(k==='pickf'||k==='pickr'){
         const h=heads[k==='pickr'?1:0],offset=new R(h.side*160,130,-h.side*360);
         const target=new R(),position=new R();
-        const destination=()=>{const p=pose(h);target.copy(m.origin()).add(xs(p.x,p.y,.95));position.copy(target).add(offset);};
+        const destination=()=>{const p=pose(h),o=m.origin();target.copy(o).add(xs(p.x,p.y,.95));position.copy(target).add(offset);
+          position.x=Math.min(o.x+560,Math.max(o.x-560,position.x));};   /* keep the camera inside the side covers (x = +/-645) */
         destination();C.flyTo(position.toArray(),target.toArray());
         return rdt=>{destination();const alpha=1-Math.exp(-8*Math.max(0,rdt));
           C.camera.position.lerp(position,alpha);C.controls.target.lerp(target,alpha);};
@@ -5839,8 +5847,11 @@ function measure(b){
   const sp=b.spi||(b.spi={}),flagged=!!sp.printerFlag||st.forceFlag>0;
   if(st.forceFlag>0&&!sp.printerFlag){sp.printerFlag='INSUFFICIENT PASTE';sp.region='U2';}
   if(st.forceFlag>0)st.forceFlag--;
-  st.drift.x+=gauss()*7+1.2;st.drift.y+=gauss()*5-.4;
-  const off={x:st.drift.x+gauss()*4,y:st.drift.y+gauss()*4},bg=1+gauss()*.012;
+  /* print offset = bounded process drift (mean-reverting around a systematic stencil/board offset) + the printer's SPI-fed table bias */
+  if(!st.drift0)st.drift0={x:st.drift.x,y:st.drift.y};
+  st.drift.x+=(st.drift0.x-st.drift.x)*.04+gauss()*5;st.drift.y+=(st.drift0.y-st.drift.y)*.04+gauss()*4;
+  const prn=m.line.machines.find(x=>x.kind==='printer'),pb=prn&&prn.st&&prn.st.bias?prn.st.bias:[0,0];
+  const off={x:st.drift.x+pb[0]+gauss()*4,y:st.drift.y+pb[1]+gauss()*4},bg=1+gauss()*.012;
   const aff=new Set();
   if(flagged){let reg=ALIAS[sp.region]||sp.region||'';PADS.forEach((p,i)=>{if(regionOf(p)===reg)aff.add(i);});
     if(!aff.size){reg=regionOf(PADS[Math.floor(Math.random()*NP)]);PADS.forEach((p,i)=>{if(regionOf(p)===reg)aff.add(i);});sp.region=reg;}}
@@ -6321,7 +6332,7 @@ C.onTick(h=>{
 });
 m.canAccept=lane=>{if(m.down||blockFlag)return false;const q=Q[lane],l=q[q.length-1];if(!l)return true;if(l.rf.ph==='in')return false;return l.rf.lx-X0>=BW+80+(l.rf.prof?130:0);};
 m.onAccept=(b,lane)=>{const R=C.rnd,tl=Q[lane];
-  const r=b.rf={lane,ph:'in',lx:0,T:AMB-2+R()*4,t:0,tau:33*(.93+.14*R()),peak:0,tal:0,ramp:0,cool:0,hist:[],liq:false,prof:false,def:R()<.04,defDone:false,rdy:false,t0:C.T.sim,ov:mkOverlay(b)};
+  const r=b.rf={lane,ph:'in',lx:0,T:AMB-2+R()*4,t:0,tau:33*(.93+.14*R()),peak:0,tal:0,ramp:0,cool:0,hist:[],liq:false,prof:false,def:R()<(opts.defectRate!==undefined?opts.defectRate:.04),defDone:false,rdy:false,t0:C.T.sim,ov:mkOverlay(b)};
   if(profWait){profWait=false;r.prof=true;profKit(b);nProf++;m.addLog('SETUP  thermal profiling run — profiler on lane '+lane,'cl');}
   const gw=b.g.getWorldPosition;b.g.getWorldPosition=function(t){gw.call(this,t);if(r.simple)t.y+=30000;return t;};   /* oven boards switch to the single-box LOD at 2.4 m (line.js LOD sees them 'far') */
   tl.push(b);
@@ -6456,7 +6467,7 @@ function kit(C){
  if(C._hk)return C._hk;
  const {THREE,std,box,cyl,canvasTex,M,NOSH,FRAME}=C;
  const sh=(c,r=.55,m=.1)=>{const x=std(c,r,m);C.shellMats.push(x);return x;};
- const K=C._hk={W:sh(0xe9ebee,.5,.08),G:sh(0x3a3f46,.55,.2),G2:std(0x565c66,.5,.35),GL:sh(0x2b3a4a,.15,.6),GS:new THREE.MeshStandardMaterial({color:0x8fb0cc,roughness:.08,metalness:.1,transparent:true,opacity:.2,depthWrite:false}),ledgeGeo:new THREE.BoxGeometry(300,2.4,8),ledgeMat:M.alu,FR:std(0xc4cad1,.4,.75),BL:std(0x1e6fd9,.4,.1),
+ const K=C._hk={W:sh(0xe9ebee,.5,.08),G:sh(0x3a3f46,.55,.2),G2:std(0x565c66,.5,.35),GL:sh(0x1a242e,.84,.04),GS:sh(0x24303c,.8,.05),ledgeGeo:new THREE.BoxGeometry(300,2.4,8),ledgeMat:M.alu,FR:std(0xc4cad1,.4,.75),BL:std(0x1e6fd9,.4,.1),
   magM:std(0x24282e,.7,.1),boardMat:std(0x1b6a3b,.55,.2),boardGeo:new THREE.BoxGeometry(250,1.6,200),combs:{},NOSH};
  K.mv=function*(o,p,d){const a=o.position.clone();yield* C.tween(d,k=>{if(p.x!==undefined)o.position.x=a.x+(p.x-a.x)*k;if(p.y!==undefined)o.position.y=a.y+(p.y-a.y)*k;if(p.z!==undefined)o.position.z=a.z+(p.z-a.z)*k;});};
  K.par=function*(...gs){let n=gs.length;gs.forEach(g=>C.run((function*(){yield* g;n--;})()));while(n>0)yield FRAME;};
@@ -6519,7 +6530,7 @@ function foot(g,m){const a=m.log.find(e=>e.text.indexOf('ALARM')===0);g.font='50
 function handler(C,opts,kind){
  const K=kit(C),{THREE,box,cyl,label,plate,std,M,NOSH,FRAME,CONV_Y}=C;
  opts=opts||{};
- const LD=kind==='loader',s=LD?1:-1,X0=opts.x||0,ID=opts.id||kind,auto=opts.auto!==false,repAfter=opts.replenishAfter!==undefined?opts.replenishAfter:60,CAP=opts.slots||50,REL=opts.releaseInterval||6;
+ const LD=kind==='loader',s=LD?1:-1,X0=opts.x||0,ID=opts.id||kind,demo=opts.standalone===true,auto=opts.auto!==undefined?!!opts.auto:demo,repAfter=opts.replenishAfter!==undefined?opts.replenishAfter:60,CAP=opts.slots||50,REL=opts.releaseInterval||6;
  const HB=1250,HT=1490,L=s*40,P=x=>s*x,{W,G,G2,GL,FR,BL}=K;
  const ALM=()=>['MAGAZINE JAM','BOARD NOT AT STOPPER (T>5 s)','LIFT OVERTRAVEL','AIR PRESSURE LOW (<4.5 bar)'][C.rnd()*4|0],bpos=i=>L-s*340*i,opos=j=>L-s*340*(j+1),levelFor=n=>LD?900-(Y0+SLOT*(n-1)):900-(Y0+SLOT*n);
  const g=new THREE.Group();g.position.x=X0;C.parentFor(opts).add(g);
@@ -6630,7 +6641,7 @@ function handler(C,opts,kind){
    while(st.outBusy||C.T.sim<st.nextRel){if(st.outBusy)m.setState('BLOCKED','OUTFEED OCCUPIED','waiting for downstream');else m.setState('IDLE','RELEASE INTERVAL','max 1 board / '+REL+' s');yield FRAME;}
    const t0=C.T.sim;st.nextRel=t0+REL;m.endCycle(null,st.prevT0===null?t0-REL:st.prevT0);st.prevT0=t0;
    m.setState('RUN','PUSH BOARD','slot '+mg.n+' / '+CAP);
-   if(st.forceF||C.rnd()<.0015){st.forceF=false;yield* m.fault(ALM(),30+C.rnd()*60);}
+   if(st.forceF||(opts.faults&&C.rnd()<.0015)){st.forceF=false;yield* m.fault(ALM(),30+C.rnd()*60);}
    yield* K.mv(pusher,{x:L-127},.4);
    const b=new C.Board(1,m.world(L),m.line);if(opts.prepare)opts.prepare(b);mg.set(mg.n-1);st.outBusy=true;st.made++;m.counters.in++;m.boards.push(b);
    yield* C.tween(1.15,k=>{pusher.position.x=L-127+290*k;b.setX(m.world(pusher.position.x+126.5));});
@@ -6645,7 +6656,7 @@ function handler(C,opts,kind){
    if(mg.n>=mg.slots){st.ready=false;yield* ejectMag();continue;}
    st.ready=true;while(!st.pending){m.setState('STARVED','WAITING FOR BOARD','slot '+(mg.n+1)+' / '+CAP);yield FRAME;}
    const b=st.pending;st.ready=false;const t0=C.T.sim;m.setState('RUN','INSERT BOARD','slot '+(mg.n+1)+' / '+CAP);
-   if(st.forceF||C.rnd()<.0015){st.forceF=false;yield* m.fault(ALM(),30+C.rnd()*60);}
+   if(st.forceF||(opts.faults&&C.rnd()<.0015)){st.forceF=false;yield* m.fault(ALM(),30+C.rnd()*60);}
    yield* C.conveyTo(b,m.world(L-s*29),cb);
    mg.set(mg.n+1);m.release(b,1);m.line.finished(b);b.dispose();st.pending=null;st.stored++;m.endCycle(null,t0);
    if(mg.n<mg.slots)yield* K.mv(lift,{y:levelFor(mg.n)},.45);
@@ -6667,7 +6678,7 @@ function handler(C,opts,kind){
  const sv=(p,t,h)=>({p:[p[0]*s,p[1],p[2]],t:[t[0]*s,t[1],t[2]],hood:h});
  m.views={over:sv([-1900,1900,3300],[0,750,0]),lift:sv([700,1100,2900],[40,850,170],1),buffer:sv([-1100,1250,1500],[-380,600,-120],1),pusher:sv([-700,1250,1000],[-100,900,170],1),
   [LD?'out':'in']:sv([1100,1200,1000],[560,900,170]),low:sv([-500,520,1500],[-300,350,170]),top:sv([0,3800,260],[0,900,0],1)};
- m.setHood=o=>hoods.forEach(h=>h.target=o?1:0);
+ m.setHood=o=>hoods.forEach(h=>{h.target=o?1:0;h.open=h.target;h.upd(0);});
  C.tag(LD?'Magazine loader':'Magazine unloader',g,P(0),1520,0);C.tag('Lift (elevator)',lift,0,500,170);C.tag('Transfer pusher',xfer,0,UP+260,0);C.tag(LD?'Board pusher':'Board back-stop',pusher,0,950,LZ);
  C.tag('Upper magazine conveyor',g,bpos(1),UP+60,RZ);C.tag('Lower magazine conveyor',g,opos(0),LOWY+60,LZ);C.tag('Signal tower',g,P(735),HB+330,-440);C.tag('Operator panel',g,P(470),1300,545);
  C.dyn(lift,xfer,pusher,hA,...hoods.map(h=>h.pivot));if(pin)C.dyn(pin);
@@ -6683,7 +6694,7 @@ function BD2(C){return C.BD;}
 function splitter(C,opts,kind){
  const K=kit(C),{THREE,box,cyl,label,plate,std,M,NOSH,FRAME,CONV_Y,canvasTex}=C;
  opts=opts||{};
- const SH=kind==='shuttle',zs=SH?1:-1,X0=opts.x||0,ID=opts.id||kind,auto=opts.auto!==false;
+ const SH=kind==='shuttle',zs=SH?1:-1,X0=opts.x||0,ID=opts.id||kind,demo=opts.standalone===true,auto=opts.auto!==undefined?!!opts.auto:demo;
  const HH=1200,Z1=170,Z2=-170,ZN=zs*430,RX=380,RS=SH?10:20,PERIOD=SH?600:480,EX=550-EXIT;
  const lo=Math.min(Z2,ZN)-130,hi=Math.max(Z1,ZN)+130,zc=(lo+hi)/2,DX=-150;   /* DX: verification desk x (merge) */
  const {W,G,G2,GL,FR,BL}=K;
@@ -6750,7 +6761,7 @@ function splitter(C,opts,kind){
  const drawMon=()=>{if(!mon)return;const c=mon.ctx;c.fillStyle='#101418';c.fillRect(0,0,512,300);c.fillStyle='#e8edf2';c.font='600 20px Arial';c.textBaseline='middle';
   if(!ver){c.fillStyle='#8fa3bd';c.fillText('VERIFICATION STATION · idle',20,40);}
   else{c.fillText('NG #'+ver.i+' / '+ver.n+'  ·  verify',20,30);c.fillStyle='#187a36';c.fillRect(60,60,392,200);c.fillStyle='#0d4f22';for(let k=0;k<30;k++)c.fillRect(80+(k*37)%350,75+(k*53)%160,24,12);
-   const px=100+ver.pos[0]*300,py=90+ver.pos[1]*140;c.lineWidth=5;c.strokeStyle=ver.real?'#ff3a3a':'#3ddc84';c.beginPath();c.arc(px,py,26,0,7);c.stroke();c.fillStyle=ver.real?'#ff6b6b':'#3ddc84';c.font='700 22px Arial';c.fillText(ver.real?'REAL DEFECT':'FALSE CALL',20,282);}
+   const px=100+ver.pos[0]*300,py=90+ver.pos[1]*140,lab=ver.real?'REAL DEFECT':ver.fc?'FALSE CALL':'UNVERIFIED';c.lineWidth=5;c.strokeStyle=ver.real?'#ff3a3a':ver.fc?'#3ddc84':'#f0b040';c.beginPath();c.arc(px,py,26,0,7);c.stroke();c.fillStyle=ver.real?'#ff6b6b':ver.fc?'#3ddc84':'#f0b040';c.font='700 22px Arial';c.fillText(lab,20,282);}
   mon.tex.needsUpdate=true;};
  /* ---- tower, e-stops, HMI, SMEMA ---- */
  const tw=K.tower(g,-520,HH,-620);K.estop(g,-535,1040,655,0);K.estop(g,535,1040,655,0);
@@ -6767,8 +6778,9 @@ function splitter(C,opts,kind){
   if(!SH)c.fillText('Real '+st.real+'  False calls '+st.fc,10,182);else c.fillText('Emptied '+st.svc+'x ('+st.rejTotal+')',10,182);foot(c,m);});
  function* segTo(z,b){const a=seg.position.z,d=Math.abs(z-a);if(d<1)return;st.moving=true;m.setState('RUN','TRANSLATE','segment -> z '+z);yield* C.tween(.3+d/700,k=>{seg.position.z=a+(z-a)*k;if(b)b.setZ(seg.position.z);});seg.position.z=z;if(b)b.setZ(z);st.moving=false;}
  const rm=b=>{const i=m.boards.indexOf(b);if(i>=0)m.boards.splice(i,1);};
- function* storeNG(b){yield* C.conveyTo(b,m.world(360),bt);const real=(b.aoi&&b.aoi.real!==undefined)?b.aoi.real:b.defects.length>0;st.ngList.push(real);rackMag.set(rackMag.n+1);b.dispose();rm(b);st.rackN++;m.counters.ng++;if(st.rackN>=RS)st.fullT=C.T.sim;
-  m.addLog((SH?'SPI NG rejected':'AOI NG buffered')+' #'+b.sn+' ('+st.rackN+'/'+RS+')','ng');}
+ function ngClass(b){const a=b.aoi;if(a){if((a.real>0)||(a.detected>0))return 'real';if(a.falseCalls>0)return 'fc';return 'plain';}return (b.defects&&b.defects.length)?'real':'plain';}
+ function* storeNG(b){yield* C.conveyTo(b,m.world(360),bt);st.ngList.push(ngClass(b));rackMag.set(rackMag.n+1);b.dispose();rm(b);st.rackN++;m.counters.ng++;if(st.rackN>=RS)st.fullT=C.T.sim;
+  m.addLog((SH?'SPI NG rejected':(b.aoi?'AOI NG buffered':'NG buffered'))+' #'+b.sn+' ('+st.rackN+'/'+RS+')','ng');}
  function* shuttleMain(){for(;;){
   while(!st.cur){m.setState('STARVED','WAITING FOR BOARD','input lane 1');yield FRAME;}
   const b=st.cur,t0=b.tIn;let lane=0;
@@ -6777,8 +6789,8 @@ function splitter(C,opts,kind){
    yield* K.par(segTo(Z1),K.mv(rackY,{y:rackLevel(st.rackN)},.5));continue;}
   while(!lane){const free=[1,2].filter(l=>!m.outQ[l]);if(free.length){const rdy=free.filter(l=>{const P=partner(l);return P&&P.canAccept(l,b);}),c=rdy.length?rdy:free;lane=c.length>1?(st.last===1?2:1):c[0];}
    else{m.setState('BLOCKED','BOTH OUTPUTS OCCUPIED','waiting for downstream');yield FRAME;}}
-  m.setState('RUN','DISPATCH','lane '+lane);yield* segTo(Zl(lane),b);
-  if(m.outQ[lane]){const o=lane===1?2:1;if(!m.outQ[o]){lane=o;yield* segTo(Zl(o),b);}else while(m.outQ[lane])yield FRAME;}   /* re-check on arrival */
+  m.setState('RUN','DISPATCH','lane '+lane);b.setLane(lane,false);yield* segTo(Zl(lane),b);
+  if(m.outQ[lane]){const o=lane===1?2:1;if(!m.outQ[o]){lane=o;b.setLane(lane,false);yield* segTo(Zl(o),b);}else while(m.outQ[lane])yield FRAME;}   /* re-check on arrival */
   let done=false;C.run((function*(){yield* C.conveyTo(b,m.world(EX),bt);done=true;})());
   while(!done&&b.x<m.world(365))yield FRAME;
   yield* segTo(Z1);while(!done)yield FRAME;   /* the segment returns while the board is still running off */
@@ -6790,20 +6802,20 @@ function splitter(C,opts,kind){
   yield* segTo(Zl(lane));pins[lane].userData.up=false;yield .2;
   m.setState('RUN','TRANSFER ONTO SEGMENT','lane '+lane);yield* C.conveyTo(b,m.world(0),bt);st.entry[lane]=null;pins[lane].userData.up=true;
   if(ng){yield* segTo(ZN,b);m.setState('RUN','NG TO BUFFER','');yield* storeNG(b);rm(b);m.endCycle(b,t0);yield* K.mv(rackY,{y:rackLevel(st.rackN)},.5);}
-  else{yield* segTo(Z1,b);yield* C.conveyTo(b,m.world(EX),bt);b.setLane(1);m.setReady(b,1);m.endCycle(b,t0);}}}
+  else{b.setLane(1,false);yield* segTo(Z1,b);yield* C.conveyTo(b,m.world(EX),bt);b.setLane(1);m.setReady(b,1);m.endCycle(b,t0);}}}
  m.canAccept=SH?(()=>!m.down&&!st.cur&&!st.inc&&!st.moving&&Math.abs(seg.position.z-Z1)<1):(l=>!m.down&&!st.entry[l]&&!st.inc[l]);
  m.onAccept=SH?(b=>{st.inc=true;C.run((function*(){yield* C.conveyTo(b,m.world(0),bt);st.inc=false;st.cur=b;})());}):((b,l)=>{st.inc[l]=true;C.run((function*(){yield* C.conveyTo(b,m.world(-EX),bt);st.inc[l]=false;st.entry[l]=b;})());});
  m.onRelease=(b,l)=>{const p=pinsOut[l];p.userData.up=false;bt.moving++;C.run((function*(){yield 1.6;bt.moving--;p.userData.up=true;})());};
  function* serveRack(){const n=st.rackN,list=st.ngList.slice(),ry=zs>0?0:PI;st.busy=true;door.target=1;C.run(K.serve(op,RX,zs*800,ry,3));yield 2.6;rackMag.set(0);
   st.ngList=[];st.rackN=0;st.fullT=null;st.lastSvc=C.T.sim;st.svc++;st.rejTotal+=n;yield* K.mv(rackY,{y:rackLevel(0)},.8);yield 3;door.target=0;
   if(SH){m.addLog('Operator emptied reject rack ('+n+' boards)','ok');}
-  else{const real=list.filter(Boolean).length,fc=n-real,per=Math.min(30,4+n*1.3)/Math.max(1,n);
+  else{const real=list.filter(x=>x==='real').length,fc=list.filter(x=>x==='fc').length,plain=n-real-fc,per=Math.min(30,4+n*1.3)/Math.max(1,n);
    C.run(K.serve(op,DX,-1080,PI,per*n+.5));yield 1.4;fix.visible=true;
-   for(let i=0;i<n;i++){ver={i:i+1,n,real:list[i],pos:[C.rnd(),C.rnd()]};drawMon();yield per;}
-   ver=null;fix.visible=false;drawMon();st.real+=real;st.fc+=fc;m.addLog('Operator verified '+n+' NG: '+real+' real, '+fc+' false calls','ok');yield 1.6;}
+   for(let i=0;i<n;i++){ver={i:i+1,n,real:list[i]==='real',fc:list[i]==='fc',pos:[C.rnd(),C.rnd()]};drawMon();yield per;}
+   ver=null;fix.visible=false;drawMon();st.real+=real;st.fc+=fc;m.addLog('Operator verified '+n+' NG: '+real+' real, '+fc+' false calls'+(plain?', '+plain+' unverified':''),'ok');yield 1.6;}
   st.busy=false;}
  m.emptyRack=()=>st.rackN>0&&!st.busy?C.run(serveRack()):0;
- if(auto)C.run((function*(){for(;;){yield 5;if(!st.busy&&st.rackN>0&&(C.T.sim-st.lastSvc>=PERIOD||(st.rackN>=RS&&C.T.sim-st.fullT>=20)))yield* serveRack();}})());
+ if(auto)C.run((function*(){yield PERIOD+180;for(;;){if(!st.busy&&st.rackN>0&&(C.T.sim-st.lastSvc>=PERIOD||(st.fullT&&st.rackN>=RS&&C.T.sim-st.fullT>=20)))yield* serveRack();yield 5;}})());
  m.update=(dt,rdt)=>{
   C.tower(m,tw,st.rackN>=RS-1);hood.upd(rdt);door.open+=(door.target-door.open)*Math.min(1,(rdt||0)*3);door.rotation.y=-zs*door.open*1.4;
   const zB=seg.position.z,D=(zB-zA)*zs,F=zA+zs*((LC+D)/2),l1=Math.max(1,Math.abs(F-zA)),l2=Math.max(1,Math.abs(F-zB));
@@ -6812,8 +6824,9 @@ function splitter(C,opts,kind){
  C.onSlow(()=>{if(m.near)hmi.redraw();});drawMon();
  m.info=()=>[['State',m.state+' · '+m.step],['Detail',m.detail||'—'],['Boards in',m.counters.in],['Boards out',m.counters.out],[SH?'Rejected (SPI NG)':'NG buffered',m.counters.ng],[SH?'Reject rack':'NG buffer',st.rackN+' / '+RS],
   [SH?'Rack emptied':'Verified (real / false call)',SH?st.svc+'x ('+st.rejTotal+')':st.real+' / '+st.fc],['Segment z',Math.round(seg.position.z)+' mm'],['Cycle',m.avgCt()?m.avgCt().toFixed(1)+' s':'—'],['Alarms',m.faults||0]];
- m.views={over:{p:[-1500,1800,3200],t:[0,700,0]},seg:{p:[500,1350,1300],t:[0,880,0],hood:1},drive:{p:[-900,1500,1400*zs],t:[0,800,-250*zs],hood:1},[SH?'reject':'ngbuf']:{p:[1000,1600,1700*zs],t:[RX,900,ZN],hood:1},top:{p:[0,3700,200],t:[0,900,0],hood:1},out:{p:[1200,1200,1000],t:[500,900,0]}};
- m.setHood=o=>{hood.target=o?1:0;};
+ m.views={over:{p:[-1500,1800,3200],t:[0,700,0]},seg:{p:[500,2600,1500],t:[0,880,0],hood:1},drive:{p:[350,2200,1700*zs],t:[0,830,mz],hood:1},[SH?'reject':'ngbuf']:{p:[780,1500,zs*1350],t:[RX,930,ZN],hood:zs>0?1:0,door:1},top:{p:[0,3700,200],t:[0,900,0],hood:1},out:{p:[1200,1200,1000],t:[500,900,0]}};
+ m.setHood=o=>{hood.target=o?1:0;hood.open=hood.target;hood.upd(0);};
+ m.setDoor=o=>{door.target=o?1:0;door.open=door.target;door.rotation.y=-zs*door.open*1.4;};
  C.tag(SH?'Lane shuttle':'Lane merge',g,0,1300,0);C.tag('Translating conveyor segment',seg,0,950,0);C.tag('Linear guide + servo belt drive',g,0,830,mz+100);C.tag('Cable chain',g,300,820,zc);C.tag(SH?'NG reject rack (10 slots)':'NG buffer magazine (20 slots)',rackY,0,200,0);C.tag('Signal tower',g,-520,HH+330,-620);C.tag('Operator panel',g,-420,1250,690);
  C.dyn(seg,chA,chB,chF,rackY,hp,door,...(fix?[fix]:[]),pinsOut[1],pinsOut[2],pins[1],pins[2]);
  C.bake(g);
@@ -6829,7 +6842,7 @@ function conveyorMod(C,opts){
  const len=opts.length||1200,lanes=opts.lanes||[1],insp=!!opts.inspection,X0=opts.x||0,ID=opts.id||'conveyor';
  const {W,G,G2,FR,BL}=K,LZs=lanes.map(l=>l===1?170:-170),zf=Math.max(...LZs)+135,zr=Math.min(...LZs)-135,zm=(zf+zr)/2,exitX=len/2-EXIT;
  const g=new THREE.Group();g.position.x=X0;C.parentFor(opts).add(g);
- const bl={},pins={},sens={},ls={},DW=opts.dwell||[12,25],CAPL=insp?2:1;
+ const bl={},pins={},sens={},ls={},DW=opts.dwell||[.45,.8],CAPL=1;
  /* frame */
  [-len/2+70,len/2-70].forEach(x=>{[zf,zr].forEach(z=>{box(g,40,CONV_Y-60-30,40,G2,x,(CONV_Y-60+30)/2,z);cyl(g,30,30,16,M.steel,x,8,z,{seg:20});});box(g,30,30,zf-zr,G2,x,300,zm);});
  [zf,zr].forEach(z=>{box(g,len-160,30,30,G2,0,300,z);box(g,len-100,60,8,W,0,820,z+(z>zm?-33:33),NOSH);});
@@ -6872,7 +6885,7 @@ function conveyorMod(C,opts){
   lanes.forEach(l=>{const bs=ls[l].list;sens[l].forEach(s=>{s.mt.emissiveIntensity=bs.some(b=>Math.abs(b.x-m.world(s.x))<130)?1.8:.05;});const li=bs.some(b=>b._ph==='INSPECT');if(li)on=true;if(ringM[l])ringM[l].emissiveIntensity=li?2.2:.2;});
   lightM.emissiveIntensity=on?1.6:.25;smI.a.emissiveIntensity=smO.a.emissiveIntensity=m.state==='RUN'?1.8:.05;smO.b.emissiveIntensity=m.state==='BLOCKED'?1.4:.05;smI.b.emissiveIntensity=m.state==='STARVED'?1.4:.05;};
  m.info=()=>[['State',m.state+' · '+m.step],['Boards in',m.counters.in],['Boards out',m.counters.out],['Lane 1',ls[1]?(ls[1].list.length?ls[1].list.map(b=>'#'+b.sn+' '+b._ph).join(', '):'free'):'—'],['Lane 2',ls[2]?(ls[2].list.length?ls[2].list.map(b=>'#'+b.sn+' '+b._ph).join(', '):'free'):'—'],['Inspected',st.insp],['Last dwell',insp&&st.dwell?st.dwell.toFixed(0)+' s':'—']];
- m.views={over:{p:[-900,1600,2300],t:[0,950,0]},lamp:{p:[600,1450,1100],t:[0,1050,0]},rails:{p:[-len/2+500,1000,900],t:[-len/2+60,820,zm]},out:{p:[len/2+300,1200,900],t:[len/2-150,900,0]}};
+ m.views={over:{p:[-1800,2000,2600],t:[0,820,0]},lamp:{p:[700,1700,1400],t:[0,1050,0]},rails:{p:[-len/2+500,1000,900],t:[-len/2+60,820,zm]},out:{p:[len/2+300,1200,900],t:[len/2-150,900,0]}};
  m.setHood=()=>{};
  C.tag(insp?'Inspection conveyor':'Conveyor',g,0,insp?1500:1000,0);C.tag('Width adjustment',g,-len/2+30,CONV_Y-60,zf+80);C.tag('Board sensor',g,exitX+160,CONV_Y+20,zf-120);C.tag('SMEMA box',g,len/2-110,860,zf+14);if(insp)C.tag('Work light',g,0,1440,zm);
  C.dyn(pins[1],pins[2]);C.bake(g);
@@ -7845,8 +7858,521 @@ return {palletRack,pallet,esdBench,dryCabinet,reelTower,reelShelf,feederCart,ste
 
 
 </script>
-<script>/* missing ../factory/building.js */</script>
-<script>/* missing ../factory/areas.js */</script>
+<script>/* src/factory/building.js */
+/* ===================================================================
+   SMT FACTORY SUITE — plant hall.
+   Datum: hall centre on the floor, y = 0. Interior 72 m (X) x 42 m (Z),
+   eaves 8000, ridge 9500. Roof, walls and overhead services do not cast
+   shadows (the core sun would black out the floor). Floor-standing steel does.
+   SMT_FACTORY.building(C, opts) -> hall.
+   =================================================================== */
+'use strict';
+window.SMT_FACTORY=window.SMT_FACTORY||{};
+window.SMT_FACTORY.building=function(C,opts){
+opts=opts||{};
+const PI=Math.PI,NO={cast:false};
+const X0=-36000,X1=36000,Z0=-21000,Z1=21000,Y_E=8000,Y_R=9500;
+const BAY=6000,FRAMES=13;                 /* 12 bays, frames on both gables */
+const LINE_X0=-15500;
+const root=new THREE.Group();root.name='hall';C.scene.add(root);
+const steel=C.std(0x8e969e,.38,.72),steelD=C.std(0x5c656e,.45,.6);
+const purlinM=C.std(0xb7c0c8,.4,.55);
+/* translucent so the plant overview still reads the floor; not a shadow caster */
+const roofM=C.std(0xd5dde6,.45,.12,{transparent:true,opacity:.16,depthWrite:false,side:THREE.DoubleSide});
+const skyM=C.emissive(0xd7e4ff,1.1);
+const glassM=C.std(0x1c3348,.08,.55);
+const doorM=C.std(0x3e4650,.55,.25);
+const dockM=C.std(0x6a727b,.6,.2);
+const conc=C.std(0x8b9096,.86,.02);
+const epoxy=C.std(0x9aa1a6,.78,.04);
+const esd=C.std(0x7d8d86,.8,.03);
+const yel=C.std(0xf0c423,.55,.02);
+const yelBlk=(()=>{const t=C.canvasTex(128,32,(g,W,H)=>{for(let x=0;x<W;x+=32){g.fillStyle=(x/32)%2?'#161616':'#f2c400';g.fillRect(x,0,32,H);}},{repeat:true});
+  t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(24,1);return C.std(0xffffff,.6,0,{map:t});})();
+const zebra=(()=>{const t=C.canvasTex(128,64,(g,W,H)=>{g.fillStyle='#e6e8ea';g.fillRect(0,0,W,H);g.fillStyle='#222';for(let x=0;x<W;x+=32)g.fillRect(x,0,16,H);},{repeat:true});
+  t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(8,2);return C.std(0xffffff,.7,0,{map:t});})();
+const seam=C.canvasTex(128,256,(g,W,H)=>{g.fillStyle='#d7dee6';g.fillRect(0,0,W,H);g.fillStyle='#eef2f6';
+  for(let y=0;y<H;y+=32)g.fillRect(0,y,W,27);g.strokeStyle='#8b949e';g.lineWidth=3;
+  for(let y=0;y<=H;y+=32){g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();}
+  g.strokeStyle='rgba(255,255,255,.4)';for(let x=32;x<W;x+=64){g.beginPath();g.moveTo(x,0);g.lineTo(x,H);g.stroke();}},{repeat:true});
+function wallMat(len,h){const map=seam.clone();map.wrapS=map.wrapT=THREE.RepeatWrapping;map.repeat.set(Math.max(1,len/1400),Math.max(1,h/420));map.needsUpdate=true;
+  return C.std(0xffffff,.7,.04,{map});}
+function inst(parent,geo,mat,items,cast){
+  if(!items.length)return null;
+  const im=new THREE.InstancedMesh(geo,mat,items.length),d=new THREE.Object3D();
+  for(let i=0;i<items.length;i++){const it=items[i];
+    d.position.set(it[0],it[1],it[2]);d.rotation.set(it[3]||0,it[4]||0,it[5]||0);d.scale.set(it[6]||1,it[7]||1,it[8]||1);d.updateMatrix();im.setMatrixAt(i,d.matrix);}
+  im.castShadow=!!cast;im.receiveShadow=true;im.frustumCulled=false;parent.add(im);return im;
+}
+function band(parent,axis,fixed,t0,t1,y0,y1,thick,gaps){
+  const h=y1-y0,yc=(y0+y1)/2;if(h<20)return;
+  const gs=(gaps||[]).slice().sort((a,b)=>a.at-b.at);let c=t0;const segs=[];
+  gs.forEach(g=>{const a=g.at-g.w/2,b=g.at+g.w/2;if(a>c+80)segs.push([c,a]);c=Math.max(c,b);});
+  if(t1>c+80)segs.push([c,t1]);
+  segs.forEach(([a,b])=>{const len=b-a,mid=(a+b)/2,m=wallMat(len,h);
+    if(axis==='x')C.box(parent,len,h,thick,m,mid,yc,fixed,NO);
+    else C.box(parent,thick,h,len,m,fixed,yc,mid,NO);});
+}
+
+/* ---------- floor : yard, epoxy, ESD, walkways ---------- */
+(function floor(){
+  const yard=new THREE.Mesh(new THREE.PlaneGeometry(86000,56000),conc);yard.rotation.x=-PI/2;yard.position.y=4;yard.receiveShadow=true;yard.castShadow=false;root.add(yard);
+  const ep=new THREE.Mesh(new THREE.PlaneGeometry(71800,41800),epoxy);ep.rotation.x=-PI/2;ep.position.y=8;ep.receiveShadow=true;ep.castShadow=false;root.add(ep);
+  const epa=new THREE.Mesh(new THREE.PlaneGeometry(31000,28000),esd);epa.rotation.x=-PI/2;epa.position.set(-7500,12,0);epa.receiveShadow=true;epa.castShadow=false;root.add(epa);
+  /* EPA is x -23000..8000 (31 m) centred at -7500, z -14000..14000 */
+  const tape=(x,z,w,d)=>{C.box(root,w,16,d,yelBlk,x,22,z,NO);};
+  tape(-7500,14000,31000,160);tape(-7500,-14000,31000,160);tape(-23000,0,160,28160);tape(8000,0,160,28160);
+  [[-7500,0,0],[-16000,-11000,0],[2000,11000,0]].forEach((p,i)=>C.label(root,'ESD PROTECTED AREA',2800,420,p[0],28,p[1],{rx:-PI/2,bg:'#f2c400',fg:'#1a1a1a',pw:1024,size:.42}));
+  /* 100 mm walkway lines — main aisle and the two cross aisles */
+  const line=(x,z,w,d)=>C.box(root,w,8,d,yel,x,26,z,NO);
+  line(0,1100,68000,100);line(0,-1100,68000,100);
+  line(0,6200,68000,100);line(0,-6200,68000,100);
+  line(-16500,0,100,12400);line(7500,0,100,12400);line(21500,0,100,12400);
+  /* zebra at the three west docks and the south entrance */
+  [[-34800,-9000],[ -34800,0],[-34800,9000],[-10000,-19200]].forEach(p=>{
+    const m=new THREE.Mesh(new THREE.PlaneGeometry(p[0]<-20000?2800:2200,p[0]<-20000?1400:1800),zebra);
+    m.rotation.x=-PI/2;m.position.set(p[0],28,p[1]);m.receiveShadow=true;m.castShadow=false;root.add(m);});
+})();
+
+/* ---------- portal frames, purlins, roof ---------- */
+const ang=Math.atan2(Y_R-Y_E,21000);
+const cols=[],bases=[],rafters=[],haunch=[],purlins=[];
+for(let i=0;i<FRAMES;i++){
+  const x=X0+i*BAY;
+  [[Z0+220,1],[Z1-220,-1]].forEach(p=>{
+    cols.push([x,Y_E/2,p[0]]);bases.push([x,12,p[0]]);
+    haunch.push([x,Y_E-180,p[0]-p[1]*1400,-ang*p[1],0,0]);
+  });
+  /* south slope (rx negative lifts the ridge end) and north slope */
+  rafters.push([x,8720,-10500,-ang,0,0]);
+  rafters.push([x,8720,10500,ang,0,0]);
+}
+inst(root,new THREE.BoxGeometry(400,Y_E,300),steel,cols,true);
+inst(root,new THREE.BoxGeometry(640,28,520),steelD,bases,true);
+inst(root,new THREE.BoxGeometry(220,420,20800),steel,rafters,true);
+inst(root,new THREE.BoxGeometry(260,700,2800),steelD,haunch,true);
+for(let i=0;i<FRAMES-1;i++){
+  const x=X0+BAY/2+i*BAY;
+  for(let s=0;s<8;s++){
+    const t=(s+.5)/8,zS=-21000+t*21000,yS=Y_E+t*(Y_R-Y_E);
+    purlins.push([x,yS-180,zS,-ang,0,0]);
+    purlins.push([x,yS-180,-zS,ang,0,0]);
+  }
+}
+inst(root,new THREE.BoxGeometry(BAY-80,100,160),purlinM,purlins,false);
+/* roof cladding, two slopes, no cast */
+function slope(zSign){
+  const L=Math.hypot(21600,Y_R-Y_E+80);
+  const m=C.box(root,74400,70,L,roofM,0,8760,zSign*-10800,Object.assign({rx:zSign>0?ang:-ang},NO));
+  m.receiveShadow=true;return m;
+}
+slope(-1);slope(1);
+/* two skylight strips on the slopes */
+[[-1,-6200],[1,6200]].forEach(p=>{
+  const t=Math.abs(p[1])/21000,y=Y_E+t*(Y_R-Y_E)+80;
+  C.box(root,62000,30,2000,skyM,0,y,p[1],Object.assign({rx:p[0]>0?ang:-ang},NO));
+});
+/* ridge cap */
+C.box(root,74400,80,700,steel,0,Y_R+40,0,NO);
+
+/* gable triangles above the east and west walls */
+(function gables(){
+  const mat=C.std(0xd5dbe3,.7,.04);mat.side=THREE.DoubleSide;
+  [X0-90,X1+90].forEach(x=>{
+    const y0=Y_E-40,y1=Y_R+40,z0=-21400,z1=21400,d=80;
+    const v=new Float32Array([
+      -d,y0,z0, -d,y1,0, -d,y0,z1,
+       d,y0,z0,  d,y0,z1,  d,y1,0
+    ]);
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(v,3));g.computeVertexNormals();
+    const mesh=new THREE.Mesh(g,mat);mesh.position.x=x;mesh.castShadow=false;mesh.receiveShadow=true;root.add(mesh);
+  });
+})();
+
+/* ---------- walls, window band, doors ---------- */
+const southDoors=[{at:-10000,w:2000},{at:24000,w:1400}];
+const northDoors=[{at:-28000,w:1400},{at:18000,w:1400}];
+const westDocks=[{at:-9000,w:4400},{at:0,w:4400},{at:9000,w:4400}];
+const eastDoors=[{at:-12000,w:1400},{at:6000,w:1400}];
+/* lower band stops at the window; docks are taller than the window sill */
+band(root,'x',Z0,X0,X1,0,3500,200,southDoors);
+band(root,'x',Z1,X0,X1,0,3500,200,northDoors);
+band(root,'z',X0,Z0,Z1,0,3500,200,westDocks);
+band(root,'z',X1,Z0,Z1,0,3500,200,eastDoors);
+/* window band is glass only (a solid panel here would hide it from inside) */
+function glassRun(axis,fixed,t0,t1,gaps){
+  const gs=(gaps||[]).slice().sort((a,b)=>a.at-b.at);let c=t0;const segs=[];
+  gs.forEach(g=>{const a=g.at-g.w/2-200,b=g.at+g.w/2+200;if(a>c+100)segs.push([c,a]);c=Math.max(c,b);});
+  if(t1>c+100)segs.push([c,t1]);
+  segs.forEach(([a,b])=>{const len=b-a,mid=(a+b)/2;
+    if(axis==='x')C.box(root,len,1320,30,glassM,mid,4250,fixed,NO);
+    else C.box(root,30,1320,len,glassM,fixed,4250,mid,NO);});
+}
+glassRun('x',Z0-130,X0+400,X1-400,[]);
+glassRun('x',Z1+130,X0+400,X1-400,[]);
+glassRun('z',X0-130,Z0+400,Z1-400,westDocks);
+glassRun('z',X1+130,Z0+400,Z1-400,[]);
+/* upper wall, eaves */
+band(root,'x',Z0,X0,X1,5000,Y_E,200,[]);
+band(root,'x',Z1,X0,X1,5000,Y_E,200,[]);
+band(root,'z',X0,Z0,Z1,5000,Y_E,200,[]);
+band(root,'z',X1,Z0,Z1,5000,Y_E,200,[]);
+
+/* dock doors + levelers on the west wall, personnel / emergency leaves */
+const roll=(()=>{const t=C.canvasTex(64,128,(g,W,H)=>{g.fillStyle='#5c656e';g.fillRect(0,0,W,H);g.strokeStyle='#3a4148';g.lineWidth=4;
+  for(let y=8;y<H;y+=16){g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();}g.fillStyle='#8a929a';g.fillRect(0,0,W,10);},{repeat:true});
+  t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(2,6);return C.std(0xffffff,.55,.3,{map:t});})();
+westDocks.forEach(d=>{
+  C.box(root,80,4400,d.w-200,roll,X0+40,2200,d.at,NO);
+  C.box(root,260,180,d.w+600,steelD,X0-40,4520,d.at,NO);          /* header */
+  C.box(root,2400,160,d.w-600,steel,X0-1600,80,d.at,Object.assign({},NO)); /* leveler */
+  C.box(root,400,40,d.w-900,steelD,X0-2800,40,d.at,NO);            /* lip */
+  C.label(root,'DOCK',900,220,X0+20,3900,d.at,{ry:PI/2,bg:'#1e6fd9',fg:'#fff',pw:512,size:.5});
+});
+function leaf(x,z,ry,w,h,emergency){
+  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=ry;root.add(g);
+  C.box(g,w,h,70,doorM,0,h/2,0,NO);
+  C.box(g,w-160,Math.min(700,h-900),30,glassM,0,h-560,40,NO);
+  C.box(g,30,140,40,steel,w/2-80,1000,50,NO);
+  if(emergency)C.box(g,w*.7,80,16,C.M.green,0,h-120,50,NO);
+}
+/* south entrance and emergency, north emergency, east emergency — leaves sit in the opening */
+leaf(-10000,Z0+20,0,1800,2300,false);
+leaf(24000,Z0+20,0,1200,2200,true);
+leaf(-28000,Z1-20,PI,1200,2200,true);
+leaf(18000,Z1-20,PI,1200,2200,false);
+leaf(X1-20,-12000,-PI/2,1200,2200,true);
+leaf(X1-20,6000,-PI/2,1200,2200,true);
+
+/* ---------- high-bay LEDs (emissive discs + 4 real lights) ---------- */
+const lamps=[];
+for(let i=0;i<FRAMES-1;i++)for(let k=-3;k<=3;k++){
+  const x=X0+BAY/2+i*BAY,z=k*5500;
+  if(Math.abs(z)>19000)continue;
+  lamps.push([x,6900,z]);
+}
+inst(root,new THREE.CylinderGeometry(280,300,50,12),C.emissive(0xfff6e4,.85),lamps.map(p=>[p[0],6200,p[2]]),false);
+inst(root,new THREE.CylinderGeometry(22,22,320,6),steelD,lamps.map(p=>[p[0],6380,p[2]]),false);
+[[-18000,8000],[-18000,-8000],[16000,8000],[16000,-8000]].forEach(p=>{
+  const L=new THREE.PointLight(0xfff3dd,.55,32000,2);L.position.set(p[0],6600,p[1]);L.castShadow=false;root.add(L);
+});
+
+/* ---------- overhead services : trays, air, N2, exhaust, sprinklers, HVAC ---------- */
+const slots=(opts.slots||[
+  ['loader',800,1000],['printer',2600,1840],['spi',4000,1300],['shuttle',5200,1200],
+  ['placementA',6700,2332],['placementB',8300,2332],['conveyor',9500,900],['reflow',13000,1450],
+  ['conveyor2',16300,900],['aoi',17400,1500],['merge',18700,1200],['unloader',20200,1000]
+]).map(s=>Array.isArray(s)?{id:s[0],x:s[1],depth:s[2]||1200}:s);
+const lines=[{id:'LINE 1',x0:LINE_X0,z:3600},{id:'LINE 2',x0:LINE_X0,z:-3600}];
+const slotW=[];
+lines.forEach(ln=>slots.forEach(s=>slotW.push({id:s.id,line:ln.id,x:ln.x0+s.x,z:ln.z,depth:s.depth||1200})));
+
+const trayM=C.std(0xe0b000,.5,.15),airM=C.M.hose,n2M=C.std(0x7ec8c8,.4,.3),exM=C.std(0x9aa1a8,.5,.35),redM=C.std(0xc0392b,.5,.15);
+/* cable trays above each line, y = 3200, with a drop at every slot */
+lines.forEach(ln=>{
+  C.box(root,21000,80,300,trayM,ln.x0+10500,3200,ln.z,NO);
+});
+const drops=[];
+slotW.forEach(s=>drops.push([s.x,2700,s.z]));
+inst(root,new THREE.BoxGeometry(80,1100,80),trayM,drops,false);
+/* compressed-air ring around both lines at 4.2 m, drops to every slot */
+const ring=[[-17000,8000,8000,-8000],[8000,-8000,-17000,8000]];
+/* segments: x0,z0 -> x1,z1 */
+function pipe(x0,z0,x1,z1,y,dia,mat){
+  const dx=x1-x0,dz=z1-z0,alongX=Math.abs(dx)>=Math.abs(dz),len=(alongX?Math.abs(dx):Math.abs(dz))||1;
+  C.cyl(root,dia/2,dia/2,len,mat,(x0+x1)/2,y,(z0+z1)/2,alongX?{rz:-PI/2,seg:10,cast:false}:{rx:PI/2,seg:10,cast:false});
+}
+pipe(-17000,-8000,9000,-8000,4200,63,airM);
+pipe(9000,-8000,9000,8000,4200,63,airM);
+pipe(9000,8000,-17000,8000,4200,63,airM);
+pipe(-17000,8000,-17000,-8000,4200,63,airM);
+const airDrops=[];
+slotW.forEach(s=>airDrops.push([s.x,3350,s.z]));
+inst(root,new THREE.CylinderGeometry(22,22,1700,8),airM,airDrops,false);
+/* nitrogen from the utility room to the two reflow ovens (local x 13000) */
+const refX=LINE_X0+13000;
+pipe(-7000,18500,-7000,8000,4500,50,n2M);
+pipe(-7000,8000,refX,8000,4500,50,n2M);
+pipe(refX,8000,refX,-8000,4500,50,n2M);
+[3600,-3600].forEach(z=>{pipe(refX,z>0?8000:-8000,refX,z,4500,40,n2M);airDrops.push([refX,3000,z]);});
+inst(root,new THREE.CylinderGeometry(18,18,2800,8),n2M,[[refX,3000,3600],[refX,3000,-3600]],false);
+/* reflow exhaust: two dia-150 stacks per oven -> dia 400 main -> roof */
+[3600,-3600].forEach(z=>{
+  [-900,900].forEach(dx=>C.cyl(root,75,75,3600,exM,refX+dx,5200,z,{seg:10,cast:false}));
+});
+C.cyl(root,200,200,5200,exM,refX,6900,7000,{rx:PI/2,seg:12,cast:false}); /* main along Z between the ovens */
+C.cyl(root,200,200,2200,exM,refX,8200,0,{seg:12,cast:false});             /* up through the ridge */
+/* sprinkler mains under the roof + heads */
+[-15000,-5000,5000,15000].forEach(z=>C.box(root,70000,50,50,redM,0,7600,z,NO));
+const heads=[];
+for(let x=-32000;x<=32000;x+=4000)for(const z of[-15000,-5000,5000,15000])heads.push([x,7480,z]);
+inst(root,new THREE.CylinderGeometry(40,16,80,6),redM,heads,false);
+/* two spiral HVAC ducts with diffusers */
+[12500,-12500].forEach(z=>{
+  C.cyl(root,360,360,60000,C.std(0xd5dbe3,.45,.25),0,7450,z,{rz:-PI/2,seg:16,cast:false});
+});
+const rings=[],diffs=[];
+for(let x=-28000;x<=28000;x+=2500){rings.push([x,7450,12500,0,PI/2,0]);rings.push([x,7450,-12500,0,PI/2,0]);}
+for(let x=-28000;x<=28000;x+=5000){diffs.push([x,6900,12500]);diffs.push([x,6900,-12500]);}
+inst(root,new THREE.TorusGeometry(390,28,6,14),steel,rings,false);
+inst(root,new THREE.BoxGeometry(500,70,500),C.std(0xc5ccd3,.5,.2),diffs,false);
+
+/* ---------- zones, views ---------- */
+const zones={
+  warehouse:{x0:-36000,x1:-23000,z0:-21000,z1:21000},
+  store:{x0:-23000,x1:-16500,z0:-14000,z1:14000},
+  smt:{x0:-16000,x1:8000,z0:-21000,z1:21000},
+  postsmt:{x0:8000,x1:22000,z0:-14000,z1:14000},
+  packing:{x0:22000,x1:36000,z0:-21000,z1:14000},
+  offices:{x0:8000,x1:30000,z0:15000,z1:21000},
+  utility:{x0:-12000,x1:-2000,z0:16000,z1:21000},
+  entrance:{x0:-14000,x1:-6000,z0:-21000,z1:-16500}
+};
+function cam(p,t){return {p:p,t:t};}
+const views={
+  plant:cam([-52000,30000,52000],[0,0,0]),
+  warehouse:cam([-28000,5200,14000],[-29000,1400,0]),
+  store:cam([-19200,3000,8500],[-20200,1000,-4500]),
+  lines:cam([-14000,7000,16000],[-4000,1000,2000]),
+  postsmt:cam([14500,5200,10500],[15000,1000,-500]),
+  offices:cam([15000,2400,17800],[24000,1300,18500]),
+  utility:cam([-1500,5200,14800],[-7500,1000,18800]),
+  entrance:cam([-7800,2600,-14000],[-10500,900,-19600]),
+  walk:function(){
+    const y=1650,z=1000,x0=-28000,x1=30000,span=x1-x0;
+    const place=s=>{const x=x0+((s%span)+span)%span;C.camera.position.set(x,y,z);C.controls.target.set(Math.min(x+4500,x1),1100,2600);};
+    place(C.T.sim*900);
+    return function(){place(C.T.sim*900);};
+  }
+};
+const hall={size:{x0:X0,x1:X1,z0:Z0,z1:Z1,eaves:Y_E,ridge:Y_R,x:X1-X0,z:Z1-Z0},
+  zones,lines,slots:slotW,andons:[],movers:[],views,root};
+C.bake(root);
+return hall;
+};
+
+</script>
+<script>/* src/factory/areas.js */
+/* ===================================================================
+   SMT FACTORY SUITE — hall areas, people and AMRs.
+   Uses SMT_PROPS when it is loaded; otherwise a labelled box of the
+   documented size. Line footprints (z 2200..5000 and -5000..-2200,
+   x -16000..8000) stay empty for the machines the coordinator places.
+   SMT_FACTORY.areas(C, hall, opts) fills hall.andons and hall.movers.
+   =================================================================== */
+'use strict';
+window.SMT_FACTORY=window.SMT_FACTORY||{};
+window.SMT_FACTORY.areas=function(C,hall,opts){
+opts=opts||{};
+const PI=Math.PI;
+const P=(typeof SMT_PROPS!=='undefined')?SMT_PROPS:null;
+const PH={palletRack:[4000,5000,1100],pallet:[1200,900,800],esdBench:[1500,1950,750],dryCabinet:[600,1800,700],
+  reelTower:[900,2050,900],reelShelf:[1800,2000,400],feederCart:[650,1000,750],stencilRack:[1100,900,800],
+  pasteFridge:[600,1400,620],lockers:[1800,1800,500],fireExtinguisher:[400,1750,200],firstAid:[460,1600,200],
+  sign:[600,200,40],person:[500,1750,400],trolley:[900,950,500],amr:[890,700,580],forklift:[2000,2200,1000],
+  palletJack:[700,1300,1600],testStation:[2000,2000,900],xray:[1400,1950,1300],selectiveSolder:[2100,1650,1600],
+  compressor:[1500,1500,900],airReceiver:[1100,2600,1100],airDryer:[800,1100,700],n2Generator:[1800,1800,900],
+  desk:[1600,740,800],officeChair:[600,1000,600],meetingTable:[2800,760,1400],whiteboard:[1800,1900,400],
+  andonBoard:[1600,900,80],turnstile:[700,1200,700],wasteBins:[1400,600,500],reworkStation:[1500,2100,750]};
+const groups={};
+function zone(name){const g=new THREE.Group();g.name=name;hall.root.add(g);groups[name]=g;return g;}
+function put(parent,name,x,z,ry,o){
+  let g;
+  if(P&&typeof P[name]==='function')g=P[name](C,o||{});
+  else{g=new THREE.Group();const s=PH[name]||[1000,1000,1000];
+    C.box(g,s[0],s[1],s[2],C.std(0x8b939c,.6,.1),0,s[1]/2,0);
+    C.label(g,name,Math.min(900,s[0]-40),140,0,s[1]+30,0,{bg:'#1e6fd9',fg:'#fff',size:.4});}
+  g.position.set(x,0,z);if(ry)g.rotation.y=ry;parent.add(g);return g;
+}
+function mslOven(){
+  const g=new THREE.Group(),body=C.std(0xd9dde1,.5,.12),dk=C.std(0x2a3036,.5,.3);
+  C.box(g,900,1500,900,body,0,750,0);C.box(g,760,520,30,dk,0,900,450);
+  C.box(g,700,16,16,C.emissive(0xffb15a,.8),0,1180,455,{cast:false});
+  C.plate(g,['MSL BAKE','125 °C'],520,180,0,640,470,{bg:'#111',fg:'#f2c400',border:'#f2c400'});
+  C.label(g,'MSL BAKE',700,140,0,1560,460,{bg:'#1e6fd9',fg:'#fff',size:.46});
+  return g;
+}
+
+const wh=zone('warehouse'),st=zone('store'),smt=zone('smt'),post=zone('postsmt'),pack=zone('packing');
+const off=zone('offices'),util=zone('utility'),ent=zone('entrance'),safe=zone('safety');
+
+/* warehouse — racks face the central aisle, docks stay clear on the west */
+[[-30800,-10500,PI/2],[-30800,9000,PI/2],[-25800,-10500,-PI/2],[-25800,9000,-PI/2]].forEach(p=>
+  put(wh,'palletRack',p[0],p[1],p[2],{bays:3,levels:3,loads:true}));
+[[-34200,-4500],[-34200,0],[-34200,4500],[-34500,9000]].forEach(p=>put(wh,'pallet',p[0],p[1],0,{loaded:true,h:700}));
+put(wh,'palletJack',-33600,-9000,PI/2);
+put(wh,'trolley',-33600,12000,0);
+put(wh,'wasteBins',-24000,-16000,0);
+
+/* component store + kitting, inside the EPA */
+[[-21400,-11000],[ -21400,-7800]].forEach(p=>put(st,'reelTower',p[0],p[1],PI/2));
+put(st,'dryCabinet',-21400,-4500,PI/2);put(st,'dryCabinet',-21400,-2200,PI/2);
+put(st,'pasteFridge',-21400,800,PI/2);
+put(st,'stencilRack',-21400,3800,PI/2);
+put(st,'reelShelf',-21400,7500,-PI/2);
+[[-18200,-10000],[-18200,-6500]].forEach(p=>put(st,'reelShelf',p[0],p[1],PI/2));
+[[-18200,-2800],[-18200,200],[-18200,2800]].forEach(p=>put(st,'feederCart',p[0],p[1],PI/2));
+put(st,'esdBench',-18000,7000,-PI/2,{w:1600,monitor:true,solder:false});
+const oven=mslOven();oven.position.set(-18000,0,10500);oven.rotation.y=-PI/2;st.add(oven);
+
+/* post-SMT — north row and south row, clear of the office block (z < 14000) */
+put(post,'esdBench',10800,2800,0,{microscope:true,solder:true});
+put(post,'reworkStation',14200,2800,0);
+put(post,'xray',17800,2600,0);
+put(post,'selectiveSolder',20800,2400,PI);
+put(post,'testStation',11500,-4200,PI);
+put(post,'testStation',16000,-4200,PI);
+put(post,'esdBench',19800,-4200,PI,{solder:true,monitor:true});
+put(post,'wasteBins',20500,-8000,0);
+put(post,'trolley',9800,-1000,PI/2);
+
+/* packing */
+put(pack,'esdBench',26500,2000,0,{solder:false,monitor:true});
+put(pack,'esdBench',30500,2000,0,{solder:false,monitor:true});
+[[27000,-5500],[29800,-5500],[32600,-5500]].forEach(p=>put(pack,'pallet',p[0],p[1],0,{loaded:true,h:800}));
+put(pack,'palletRack',28500,9000,0,{bays:2,levels:3,loads:true});
+put(pack,'wasteBins',33500,2000,PI/2);
+put(pack,'palletJack',24500,-2000,-PI/2);
+
+/* offices along the north wall — dark glass, desks, meeting room */
+const glass=C.std(0x9ec4dc,.06,.2,{transparent:true,opacity:.28,depthWrite:false,side:THREE.DoubleSide});
+function gwall(x,z,w,h,d){C.box(off,w,h,d,glass,x,h/2,z,{cast:false});}
+gwall(12000,15200,8000,2800,80);gwall(23000,15200,14000,2800,80);   /* south glass, door at x=16000 */
+gwall(8000,18000,80,2800,5600);gwall(30000,18000,80,2800,5600);
+gwall(24000,19200,80,2800,2800);gwall(24000,16400,80,2800,1600);    /* meeting-room partition, door gap */
+[[11000,19300],[14800,19300],[18800,19300],[21400,19300]].forEach(p=>{
+  put(off,'desk',p[0],p[1],PI);put(off,'officeChair',p[0],p[1]-900,0);});
+put(off,'meetingTable',27200,18000,0,{seats:8});
+put(off,'whiteboard',27200,20550,PI);
+put(off,'wasteBins',29500,16000,PI);
+
+/* utility room */
+const uw=C.std(0xc5ced6,.7,.05);
+function uwall(x,z,w,h,d){C.box(util,w,h,d,uw,x,h/2,z,{cast:false});}
+uwall(-10000,16080,4000,2800,120);uwall(-4000,16080,4000,2800,120);  /* south, 2 m door at x=-7000 */
+uwall(-12000,18500,120,3000,4800);uwall(-2000,18500,120,3000,4800);
+put(util,'compressor',-10500,18800,PI/2);
+put(util,'airDryer',-8200,18600,PI/2);
+put(util,'airReceiver',-6000,19000,0);
+put(util,'n2Generator',-3800,18800,-PI/2);
+
+/* ESD entrance */
+put(ent,'lockers',-12500,-19200,0,{n:6});
+put(ent,'turnstile',-9000,-19000,0);
+put(ent,'turnstile',-7200,-19000,0);
+put(ent,'esdBench',-5500,-18800,PI,{w:1200,solder:false,monitor:true,shelf:false});
+
+/* extinguishers, first-aid, exit signs */
+for(let i=1;i<=11;i+=2){
+  const x=-36000+i*6000;
+  put(safe,'fireExtinguisher',x,-20740,0);
+  if(i%4===1)put(safe,'firstAid',x,20740,PI);
+}
+[[-10000,-20880,0,'ENTRANCE'],[24000,-20880,0,'EXIT'],[-28000,20880,PI,'EXIT'],[18000,20880,PI,'EXIT'],
+ [35880,-12000,-PI/2,'EXIT'],[35880,6000,-PI/2,'EXIT']].forEach(s=>{
+  const g=put(safe,'sign',s[0],s[1],s[2],{text:s[3],w:780,h:240,bg:s[3]==='EXIT'?'#1f9e55':'#1e6fd9'});
+  g.position.y=2500;
+});
+
+/* zone names on the floor */
+[['GOODS IN / OUT',-29500,-16000],['COMPONENT STORE',-19800,12500],['SMT LINES',-5500,11000],
+ ['POST-SMT',15000,11000],['PACKING',29000,-14000],['OFFICES',18000,16800],['UTILITY',-7000,17200],
+ ['ESD ENTRANCE',-10000,-17200]].forEach(l=>C.label(hall.root,l[0],3400,460,l[1],36,l[2],{rx:-PI/2,bg:'#16324f',fg:'#e8f1ff',pw:1024,size:.42}));
+
+/* andon boards hanging under the cable tray (tray at y=3200) */
+linesAndons();
+function linesAndons(){
+  hall.lines.forEach(ln=>{
+    const mid=ln.x0+10000;
+    const b=put(smt,'andonBoard',mid,ln.z,0,{w:1800,h:800,hang:200});
+    b.position.y=2200;
+    hall.andons.push({line:ln.id,board:b});
+    paint(b,ln.id,true);
+  });
+}
+function paint(board,title){
+  const ud=board.userData;if(!ud||!ud.ctx)return;
+  const ctx=ud.ctx,W=1024,H=576,t=C.T.sim;
+  const out=Math.round(112+6*Math.sin(t/40)),oee=(91+1.2*Math.sin(t/70)).toFixed(1),fpy=(98.4+.3*Math.sin(t/55)).toFixed(1);
+  ctx.fillStyle='#0b1016';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#12325e';ctx.fillRect(0,0,W,70);
+  ctx.fillStyle='#e7f0ff';ctx.font='700 36px "Segoe UI",Arial';ctx.textAlign='left';ctx.fillText(title+'  ·  ANDON',28,48);
+  const cell=(x,y,k,v,c)=>{ctx.fillStyle='#121922';ctx.fillRect(x,y,230,160);ctx.fillStyle=c;ctx.fillRect(x,y,230,8);
+    ctx.fillStyle='#8ea8c6';ctx.font='500 22px "Segoe UI",Arial';ctx.fillText(k,x+16,y+48);
+    ctx.fillStyle='#f2f6fb';ctx.font='700 48px "Segoe UI",Arial';ctx.fillText(v,x+16,y+118);};
+  cell(24,100,'OUT / h',String(out),'#3dd68c');cell(270,100,'OEE',oee+'%','#3dd68c');
+  cell(516,100,'FPY',fpy+'%','#3dd68c');cell(762,100,'NG','2','#ffb020');
+  ctx.fillStyle='#102418';ctx.fillRect(24,290,976,250);
+  ctx.fillStyle='#3dd68c';ctx.font='700 40px "Segoe UI",Arial';ctx.textAlign='center';ctx.fillText('RUNNING',512,400);
+  ctx.font='500 24px "Segoe UI",Arial';ctx.fillStyle='#b7cbe0';ctx.fillText('placement is the bottleneck',512,460);
+  if(ud.tex)ud.tex.needsUpdate=true;
+}
+
+/* people, two AMRs, one forklift — animated from sim time */
+const moversG=new THREE.Group();moversG.name='movers';moversG.userData.dynamic=true;hall.root.add(moversG);
+function loop(group,pts,speed,front,kind){
+  const lens=[];let total=0;
+  for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length];const L=Math.hypot(b[0]-a[0],b[1]-a[1])||1;lens.push(L);total+=L;}
+  return {kind,group,step(){
+    const dist=((C.T.sim*speed)%total+total)%total;let left=dist,i=0;
+    while(left>lens[i]&&i<lens.length-1){left-=lens[i];i++;}
+    const a=pts[i],b=pts[(i+1)%pts.length],u=left/lens[i];
+    group.position.set(a[0]+(b[0]-a[0])*u,0,a[1]+(b[1]-a[1])*u);
+    const dx=b[0]-a[0],dz=b[1]-a[1];
+    group.rotation.y=front==='x'?Math.atan2(-dz,dx):Math.atan2(dx,dz);
+    const ud=group.userData,s=Math.sin(C.T.sim*7)*.55;
+    if(ud.legs){ud.legs[0].rotation.x=s;ud.legs[1].rotation.x=-s;ud.arms[0].rotation.x=-s*.75;ud.arms[1].rotation.x=s*.75;}
+    if(ud.forks)ud.forks.position.y=60+Math.sin(C.T.sim*.45)*140;
+    if(ud.leds)ud.leds.emissiveIntensity=1.2+Math.sin(C.T.sim*5)*.8;
+  }};
+}
+function stand(group,kind){
+  return {kind,group,step(){const ud=group.userData;if(!ud.arms)return;const s=Math.sin(C.T.sim*1.4)*.1;
+    ud.arms[0].rotation.x=.35+s;ud.arms[1].rotation.x=.15-s;}};
+}
+function personAt(x,z,ry){const g=put(moversG,'person',x,z,ry||0);return g;}
+const aisle=(z,x0,x1,speed)=>[[x0,z],[x1,z]];
+/* eight walking operators on aisle loops that stay out of the machine bands */
+[
+  [aisle(0,-24000,30000),1300],
+  [aisle(8000,-22000,26000),1200],
+  [aisle(-8000,-22000,24000),1100],
+  [[[-28400,-12000],[-28400,12000],[-34000,0],[-28400,-12000]],1400],
+  [aisle(6800,9000,21000),1000],
+  [aisle(-6800,24000,33000),1000],
+  [[[-20000,-12000],[-17000,-12000],[-17000,-900],[7000,-900],[7000,-12000],[-20000,-12000]],900],
+  [[[-19000,11000],[-17000,11000],[-17000,-1400],[6500,-1400],[14000,-1400],[14000,9000],[-19000,9000]],900]
+].forEach((spec,i)=>{
+  const g=personAt(spec[0][0][0],spec[0][0][1],0);
+  hall.movers.push(loop(g,spec[0],spec[1],'z','person'));
+});
+/* four standing */
+[[-18000,6200,-PI/2],[-7000,6800,PI/2],[-4000,-6800,-PI/2],[15000,-6800,0],[27500,-6800,PI]].forEach(p=>{
+  hall.movers.push(stand(personAt(p[0],p[1],p[2]),'person'));
+});
+/* two AMRs: store -> line start -> line end -> post-SMT */
+const amr1=put(moversG,'amr',-20000,-12000,0,{top:'magazine'});
+hall.movers.push(loop(amr1,[
+  [-20000,-9000],[-17200,-9000],[-17200,1400],[6800,1400],[15000,1400],[15000,-9000]
+],800,'z','amr'));
+const amr2=put(moversG,'amr',-19000,10000,PI,{top:'cart'});
+hall.movers.push(loop(amr2,[
+  [-19000,10000],[-17200,10000],[-17200,-1400],[6400,-1400],[14500,-1400],[14500,10000]
+],750,'z','amr'));
+const fk=put(moversG,'forklift',-34500,0,0);
+hall.movers.push(loop(fk,[
+  [-34500,0],[-28400,0],[-28400,11000],[-28400,-11000],[-28400,0]
+],1100,'x','forklift'));
+
+C.onFrame(()=>hall.movers.forEach(m=>m.step()));
+C.onSlow(()=>hall.andons.forEach(a=>paint(a.board,a.line)));
+
+/* merge static props; movers stay dynamic */
+Object.keys(groups).forEach(k=>{try{C.bake(groups[k]);}catch(e){/* a zone with nothing mergeable is fine */}});
+return hall;
+};
+
+</script>
 <script>/* src/pages/factory.page.js */
 /* ===================================================================
    SMT PLANT — factory page: building + areas + two complete dual-lane SMT lines.
@@ -7864,25 +8390,28 @@ const F=window.SMT_FACTORY||{};
 let hall=null;
 try{hall=F.building?F.building(C,{}):null;}catch(e){console.error('building failed',e);}
 try{if(F.areas&&hall)F.areas(C,hall,{});}catch(e){console.error('areas failed',e);}
+/* the building paints demo figures on its andon boards; this page paints live line KPIs instead */
+const ANDONS=(hall&&hall.andons)?hall.andons.slice():[];if(hall)hall.andons=[];
 
 /* ---------- line definition ---------- */
 /* body length along X and how far each machine's own conveyor sticks out of the body (in / out side) */
 const DIMS={loader:{len:1600,inR:0,outR:120},printer:{len:1180,inR:250,outR:250},spi:{len:1000,inR:250,outR:250},
   shuttle:{len:1100,inR:120,outR:120},placement:{len:1280,inR:150,outR:150},conveyor:{len:900,inR:0,outR:0},
   reflow:{len:5800,inR:400,outR:400},aoi:{len:1250,inR:235,outR:235},merge:{len:1100,inR:120,outR:120},unloader:{len:1600,inR:120,outR:0}};
+/* auto:true = the handling machines' own operators replenish magazines, empty the reject rack / NG buffer and take full magazines away */
 const SPEC=[
-  {kind:'loader',name:'LOADER'},
+  {kind:'loader',name:'LOADER',auto:true},
   {kind:'printer',name:'PRINTER',pasteDemo:2},
   {kind:'spi',name:'SPI'},
-  {kind:'shuttle',name:'SHUTTLE'},
+  {kind:'shuttle',name:'SHUTTLE',auto:true},
   {kind:'placement',id:'placementA',name:'PLACEMENT A',job:[0,.62]},
-  {kind:'placement',id:'placementB',name:'PLACEMENT B',job:[.62,1]},
+  {kind:'placement',id:'placementB',name:'PLACEMENT B',job:[.62,1],defectRate:.03},   /* mature line: ~3 % of boards with a placement defect */
   {kind:'conveyor',id:'insp',name:'INSPECTION CONVEYOR',length:900,lanes:[1,2],inspection:true},
-  {kind:'reflow',name:'REFLOW OVEN'},
+  {kind:'reflow',name:'REFLOW OVEN',defectRate:.02},
   {kind:'conveyor',id:'cool',name:'COOLING CONVEYOR',length:900,lanes:[1,2]},
   {kind:'aoi',name:'AOI'},
-  {kind:'merge',name:'MERGE / NG BUFFER'},
-  {kind:'unloader',name:'UNLOADER'}
+  {kind:'merge',name:'MERGE / NG BUFFER',auto:true},
+  {kind:'unloader',name:'UNLOADER',auto:true}
 ];
 const PAGE={printer:'printer.html',placement:'placement.html',aoi:'aoi.html',spi:'spi.html',reflow:'reflow.html',
   loader:'handling.html',unloader:'handling.html',shuttle:'handling.html',merge:'handling.html',conveyor:'handling.html'};
@@ -7944,7 +8473,9 @@ views.postsmt=zv('postsmt',{p:[6000,8000,13000],t:[15000,500,0]});
 views.offices=zv('offices',{p:[12000,9000,6000],t:[19000,1000,18000]});
 views.utility=zv('utility',{p:[-13000,7000,8000],t:[-7000,800,18000]});
 views.walk={p:[-14800,1650,0],t:[-11000,1450,0]};
+views.entrance=zv('entrance',{p:[-7800,2600,-14000],t:[-10500,900,-19600]});
 const vfn={};Object.entries(views).forEach(([k,v])=>{vfn[k]=()=>C.flyTo(v.p,v.t,1.6);});
+if(hall&&hall.views&&typeof hall.views.walk==='function')vfn.tour=hall.views.walk;   /* automatic walk along the main aisle (moves with sim time) */
 C.addViews(vfn);
 
 /* ---------- WASD walking ---------- */
@@ -8027,12 +8558,14 @@ function applyView(m,k){
   if(m.setHood)try{m.setHood(v.hood?1:0);}catch(e){}
   if(m.setSten)try{m.setSten(!!v.sten);}catch(e){}
   C.flyTo([O.x+v.p[0],v.p[1],O.z+v.p[2]],[O.x+v.t[0],v.t[1],O.z+v.t[2]],1.3);
+  document.querySelectorAll('[data-v]').forEach(b=>b.classList.remove('on'));
 }
 let camIdx=0;
-function setCam(m,i){const cs=m.cameras||[];if(!cs.length){insetEntry.cam=null;$('minset').classList.add('none');return;}
+function setCam(m,i){const cs=m.cameras||[];$('mCam').style.display=cs.length>1?'':'none';if(!cs.length){insetEntry.cam=null;$('minset').classList.add('none');return;}
   camIdx=(i+cs.length)%cs.length;const cam=cs[camIdx];insetEntry.cam=cam.cam;insetEntry.prepare=cam.prepare;insetEntry.override=cam.override||null;
   $('minset').classList.remove('none');$('minsetT').textContent=(cam.name||'CAMERA').toUpperCase()+(cs.length>1?'  ('+(camIdx+1)+'/'+cs.length+')':'');}
 function flyToMachine(m){
+  document.querySelectorAll('[data-v]').forEach(b=>b.classList.remove('on'));
   const O=m.origin(),v=m.views&&(m.views.over||m.views.iso||Object.values(m.views)[0]);
   if(v&&v.p&&v.t)C.flyTo([O.x+v.p[0],v.p[1],O.z+v.p[2]],[O.x+v.t[0],v.t[1],O.z+v.t[2]],1.4);
   else C.flyTo([O.x-2200,2600,O.z+3800],[O.x,900,O.z],1.4);
@@ -8063,7 +8596,7 @@ function drawGantt(){
   const g=gc.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,r.width,r.height);
   const ln=lineObjs.find(l=>l.id===$('gLine').value)||lineObjs[0],ms=ln.ms,LW=138,H=r.height-16,rh=Math.max(6,Math.min(15,H/ms.length)),t1=C.T.sim,t0=t1-WIN,W=r.width-LW-10;
   const X=t=>LW+(Math.max(t0,t)-t0)/WIN*W;
-  g.font='600 10.5px "Segoe UI",Arial';g.textBaseline='middle';
+  g.font=`600 ${Math.max(7.5,Math.min(10.5,rh-1.5)).toFixed(1)}px "Segoe UI",Arial`;g.textBaseline='middle';
   ms.forEach((m,i)=>{const y=4+i*rh;
     g.fillStyle=m===sel?css('--acc2'):css('--mut');g.fillText(m.label.slice(0,20),8,y+rh/2);
     g.fillStyle=css('--btn');g.fillRect(LW,y+1,W,rh-2);
@@ -8077,7 +8610,7 @@ $('gLine').onchange=drawGantt;
 
 /* ---------- plant map ---------- */
 const mc=$('mapC');
-const HB=(hall&&hall.size)?{x0:-hall.size[0]/2,x1:hall.size[0]/2,z0:-hall.size[1]/2,z1:hall.size[1]/2}:{x0:-36000,x1:36000,z0:-21000,z1:21000};
+const HS=hall&&hall.size,HB=HS&&HS.x0!==undefined?{x0:HS.x0,x1:HS.x1,z0:HS.z0,z1:HS.z1}:(Array.isArray(HS)?{x0:-HS[0]/2,x1:HS[0]/2,z0:-HS[1]/2,z1:HS[1]/2}:{x0:-36000,x1:36000,z0:-21000,z1:21000});
 let mapT=null;
 function mapXf(r){const pad=8,sx=(r.width-2*pad)/(HB.x1-HB.x0),sz=(r.height-2*pad)/(HB.z1-HB.z0),s=Math.min(sx,sz),ox=(r.width-(HB.x1-HB.x0)*s)/2,oz=(r.height-(HB.z1-HB.z0)*s)/2;
   return{s,X:x=>ox+(x-HB.x0)*s,Z:z=>oz+(z-HB.z0)*s,inv:(px,pz)=>[(px-ox)/s+HB.x0,(pz-oz)/s+HB.z0]};}
@@ -8092,7 +8625,7 @@ function drawMap(){
   if(hall&&hall.zones){g.font='600 8.5px "Segoe UI",Arial';Object.entries(hall.zones).forEach(([k,z])=>{if(!z||z.x0===undefined)return;
     g.fillStyle='rgba(120,160,220,.10)';g.fillRect(T.X(z.x0),T.Z(z.z0),(z.x1-z.x0)*T.s,(z.z1-z.z0)*T.s);
     g.strokeStyle='rgba(120,160,220,.35)';g.strokeRect(T.X(z.x0),T.Z(z.z0),(z.x1-z.x0)*T.s,(z.z1-z.z0)*T.s);
-    g.fillStyle=css('--mut');g.fillText(k.toUpperCase(),T.X(z.x0)+3,T.Z(z.z0)+9);});}
+    if(k!=='smt'){g.fillStyle=css('--mut');g.textAlign='center';g.fillText(k.toUpperCase(),T.X((z.x0+z.x1)/2),T.Z((z.z0+z.z1)/2)+3);g.textAlign='left';}});}
   allM.forEach(m=>{const O=m.origin(),L=m.length||1000,D=m.depth||1200;g.fillStyle=scol(m.state);g.globalAlpha=m===sel?1:.85;
     g.fillRect(T.X(O.x-L/2),T.Z(O.z-D/2),Math.max(2,L*T.s),Math.max(2,D*T.s));g.globalAlpha=1;
     if(m===sel){g.strokeStyle=css('--tx');g.lineWidth=1.5;g.strokeRect(T.X(O.x-L/2)-1.5,T.Z(O.z-D/2)-1.5,L*T.s+3,D*T.s+3);}});
@@ -8107,10 +8640,12 @@ mc.addEventListener('click',e=>{if(!mapT)return;const r=mc.getBoundingClientRect
   C.flyTo([x+off.x,Math.max(1600,off.y),z+off.z],[x,600,z],1.2);});
 
 /* ---------- andon boards above the lines ---------- */
-function andonOf(a){const u=(a&&a.userData)||(a&&a.group&&a.group.userData)||{};return{ctx:a.ctx||u.ctx,tex:a.tex||u.tex,line:a.line||u.line};}
+function andonOf(a){const o=(a&&(a.board||a.group))||a,u=(o&&o.userData)||{};return{obj:o,ctx:a.ctx||u.ctx,tex:a.tex||u.tex,line:a.line||u.line};}
+const _ap=new THREE.Vector3();
+function andonLine(A){if(A.obj&&A.obj.getWorldPosition){A.obj.getWorldPosition(_ap);let best=null,bd=1e12;lineObjs.forEach(l=>{const d=Math.abs(l.z-_ap.z);if(d<bd){bd=d;best=l;}});if(best)return best;}
+  return lineObjs.find(l=>l.id===A.line||l.name===A.line)||lineObjs[0];}
 function drawAndons(){
-  if(!hall||!hall.andons)return;
-  hall.andons.forEach((a,i)=>{const A=andonOf(a);if(!A.ctx)return;const ln=lineObjs.find(l=>l.id===A.line)||lineObjs[i%lineObjs.length];if(!ln)return;
+  ANDONS.forEach((a,i)=>{const A=andonOf(a);if(!A.ctx)return;const ln=andonLine(A);if(!ln)return;
     const g=A.ctx,W=g.canvas.width,H=g.canvas.height,k=lineKpis(ln);
     g.fillStyle='#0b1018';g.fillRect(0,0,W,H);g.fillStyle='#1e6fd9';g.fillRect(0,0,W,H*.14);
     g.fillStyle='#fff';g.font=`900 ${H*.09}px Arial`;g.textBaseline='middle';g.textAlign='left';g.fillText(ln.name+'  ·  SMT',W*.03,H*.07);

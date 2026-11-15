@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLANT — factory building · SMT line simulation</title>
+<link rel="stylesheet" href="../shell.css">
+<link rel="stylesheet" href="building.css">
+</head>
+<body>
+<aside id="side"><div id="rail">
+  <button id="sideTgl" title="Show / hide panel"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  <button id="themeTgl" title="Switch White / Dark gray theme"><svg viewBox="0 0 24 24" id="themeIco"></svg></button>
+  <div class="vtxt">PLANT</div></div>
+ <div id="sideBody">
+  <div class="fn">PLANT</div><div class="fn-sub">72 × 42 m hall: goods-in, component store, two SMT line footprints, post-SMT, packing, offices and the utility room. The lines themselves are placed by the factory page.</div>
+  <div class="sec"><h3>Theme</h3><div class="seg2"><button data-theme-btn="light">White</button><button data-theme-btn="dark">Dark gray</button></div></div>
+  <div class="sec"><h3>Zones</h3><div id="zoneList"></div>
+  <p class="note">Millimetres, Y up, hall centre on the floor. Dark pads are the two SMT lines (machines stay out of this page). Walk is an eye-height pass down the main aisle. Generic building, no brand names.</p>
+ </div></aside>
+<main id="stage"><canvas id="c"></canvas>
+<div id="tags"></div>
+<div id="bar" class="panel">
+  <button data-v="plant" class="on">Plant</button>
+  <button data-v="warehouse">Warehouse</button>
+  <button data-v="store">Store</button>
+  <button data-v="lines">Lines</button>
+  <button data-v="postsmt">Post-SMT</button>
+  <button data-v="offices">Offices</button>
+  <button data-v="utility">Utility</button>
+  <button data-v="entrance">Entrance</button>
+  <button data-v="walk">Walk</button>
+  <div class="sep"></div>
+  <button id="bLab">Labels</button>
+  <button id="bPause">Pause</button>
+</div>
+</main>
+<script src="../shell.js"></script>
+<script src="../vendor/three.r147.min.js"></script>
+<script src="../vendor/OrbitControls.js"></script>
+<script src="../vendor/BufferGeometryUtils.js"></script>
+<script src="../pcbkit.js"></script>
+<script src="../core.js"></script>
+<script src="../line.js"></script>
+<script src="../factory/props.js"></script>
+<script src="../factory/building.js"></script>
+<script src="../factory/areas.js"></script>
+<script src="building.page.js"></script>
+</body>
+</html>

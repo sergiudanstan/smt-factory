@@ -21,12 +21,12 @@
 .plog div{font-family:Consolas,Menlo,monospace;font-size:10.5px;padding:1.5px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--mut)}
 .plog div b{color:var(--tx);font-weight:600}.plog .ng{color:var(--ng)}.plog .ok{color:var(--ok)}.plog .cl{color:var(--warn)}
 /* machine inspector */
-#hud{width:340px;max-height:calc(100% - var(--barH,46px) - 40px);overflow:hidden;display:flex;flex-direction:column}
+#hud{width:340px;max-height:calc(100% - var(--barH,46px) - 300px);overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;scrollbar-width:thin}
 #hud .mh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
 #hud .mh b{font-size:15px;font-weight:900;letter-spacing:.06em}
 #hud .msub{color:var(--mut);font-size:11px;margin-bottom:6px}
 #mrows .row{padding:2px 0;font-size:12px}#mrows .row span:last-child{font-family:Consolas,Menlo,monospace;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
-#minset{position:relative;height:200px;margin-top:8px;border:1px solid color-mix(in srgb,var(--cy) 45%,transparent);border-radius:8px;overflow:hidden;flex:none}
+#minset{position:relative;height:170px;margin-top:8px;border:1px solid color-mix(in srgb,var(--cy) 45%,transparent);border-radius:8px;overflow:hidden;flex:none}
 #minset .hd{position:absolute;left:0;right:0;top:0;height:24px;background:var(--hd);display:flex;align-items:center;justify-content:space-between;padding:0 9px;font-size:11px;letter-spacing:.8px;color:var(--cy)}
 #minset.none{display:none}
 #hud .acts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
@@ -44,6 +44,7 @@
 #loading{position:absolute;inset:0;display:grid;place-items:center;background:color-mix(in srgb,var(--scene) 88%,transparent);z-index:20;font-size:14px;color:var(--tx);text-align:center;letter-spacing:.04em}
 #loading small{display:block;color:var(--mut);margin-top:6px;font-size:12px}
 #loading.done{display:none}
-@media (max-width:1300px){#gantt{right:12px;height:150px}#map{display:none}}
+@media (max-width:1400px){#title{display:none}#cycle{left:12px;transform:none}}
+@media (max-width:1300px){#gantt{right:12px;height:150px}#map{display:none}#hud{max-height:calc(100% - var(--barH,46px) - 200px)}#minset{height:150px}}
 @media (max-width:1000px){#gantt{display:none}#hud{width:280px}}
 #hud .mviews{margin-top:6px}#hud .mviews button{padding:3px 7px;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em}

@@ -109,3 +109,70 @@ Updated source SHA256:
 
 - <repo>/src/machines/placement.js: db0a14cc0b4deb57e7f535aa4b52f792d16ee999a97a6e4127c740e0921604d1
 - <repo>/src/pages/placement.page.js: a7add033e456978c8e3752ebfd85e484435019382d7ab8a2d4ac1d562bece9a8
+
+## Round 2
+
+Codex had the resident-nozzle program, the mechanical detail and the HMI in the module when the session hit the usage limit. The report section and the iso draw-call budget were still open (headless Chrome measured 521 calls against a 280 ceiling). This section closes both. Only the four owned page files were edited; the last code change is the distance gate in `placement.js`.
+
+### Nozzle strategy
+
+The program is planned once per job. Each head keeps a resident set of 8 small, 6 medium and 2 large nozzles (16). Parts are grouped into trips that use only that set. Packages wider than 12 mm are not in those trips: they run in two dedicated trips at the end, on 8 fixed sockets (0, 2, 4, 6, 9, 11, 13, 15). One ANC visit swaps those sockets to the special nozzle (0.6 + 0.05×8 = 1.0 s). A second visit puts the resident set back before the board leaves.
+
+The set is restored at the end of every board. Leaving the specials mounted would spend the same two visits at the start of the next board and would slow the chip trips. Both heads therefore have the same cold and warm schedule.
+
+Nominal schedules use `Math.random` fixed at 0.5, so vision rejects do not fire. All 289 placements are covered once, with no duplicate nozzle in a trip.
+
+| Head | Trips | ANC visits | Nozzles changed | Nominal cycle |
+| --- | ---: | ---: | ---: | ---: |
+| F | 21 | 2 | 16 | 96.73 s |
+| R | 21 | 2 | 16 | 96.90 s |
+
+Fix 1 was 102.57 / 102.58 s with 48 changes and 7 ANC visits. Round 2 is under the 100 s / 2 visit target.
+
+### What was added
+
+1. Feeders: sprocket pockets advance one pitch per pick, reel spokes rotate by the consumed arc, cover tape peels to a take-up, empty tape runs into a chute and cutter under each bank.
+2. Head: each nozzle has its own Z stroke and θ, a vacuum colour on the tip, and an instanced body between pick and place.
+3. Lanes: backup table and support pins rise with the clamp, edge clamps close, the stopper pin lifts, three presence lamps per lane.
+4. Vision: the line camera flashes during SCAN, the head camera ring lights during fiducial capture.
+5. Exterior: signal tower follows RUN / wait / DOWN, front and rear E-stops, levelling feet, SMEMA plugs, nameplate, pinch-point sticker, cable glands. No brand names.
+6. HMI canvas and the side panel: placements per hour per head, nozzle class per socket, feeder alarm lines, reject ppm.
+
+### Draw calls
+
+Repeated tape, reel, vacuum, theta and carried-part geometry is instanced. Static covers and feeder banks are baked. Individual part meshes, nozzle bodies and the carried-part instances are shown only inside 3.8 m, or when the covers are not solid. The iso camera sits at about 5.1 m, so that detail is off there and on in gantry, board and nozzle views.
+
+| Moment | render.calls at iso |
+| --- | ---: |
+| Fix 1 reference in the brief | 224 |
+| Round 2 before the distance gate, after 600 s | 521 |
+| After the gate, nominal load | 68 |
+| After the gate, 600 s, boards in process | 113 |
+
+Ceiling is 280 (224 + 25 %). Page errors: 0.
+
+### Flow check
+
+Headless Chrome, `dist/placement.html`, fast-forward 600 s, dark then light, views iso, gantry, board, pickf, pickr. No page errors and no console errors.
+
+- Boards in 14, boards out 11, state still RUN.
+- Placements 3466, nozzle changes 184, vision rejects 13, feeder alarms 0.
+- Average cycle 99.46 s. One recorded board was 102.46 s because a reject adds a retry; the nominal schedule stays at 96.7–96.9 s.
+- Screenshots: `<repo>/shots/placement_r2/`.
+
+The empty-reel fault, the starvation freeze and the blocked-lane recovery were already passing on this process code before the visibility change. That change does not touch the schedule or the SMEMA loops.
+
+### Known limits
+
+- A rejected part disappears at the dump. The bin does not fill up.
+- Beyond 3.8 m the nozzle bodies and the loose component meshes are hidden. Open the covers, or use gantry / board / nozzle, to see them.
+- No core or line change.
+
+### SHA256
+
+- `<repo>/src/machines/placement.js`: f08e8fc492983880f4f7963f517bfd3c8f421bf1eb1c9e5b25f1bfc1dfa6ac5f
+- `<repo>/src/pages/placement.page.js`: 5cd1c653aa7d8547f8407f6e002f21367bb3f9d771369038018f439221478290
+- `<repo>/src/pages/placement.html`: 66bf6858ebc96de1b867abccea32d04db03378add241b979278f1685960e1b82
+- `<repo>/src/pages/placement.css`: de1caea503d3f92bcc5951737ea21ec8d4d7f6378d224aaad82666a729bab665
+
+GATA PLACEMENT R2

@@ -14,25 +14,28 @@ const F=window.SMT_FACTORY||{};
 let hall=null;
 try{hall=F.building?F.building(C,{}):null;}catch(e){console.error('building failed',e);}
 try{if(F.areas&&hall)F.areas(C,hall,{});}catch(e){console.error('areas failed',e);}
+/* the building paints demo figures on its andon boards; this page paints live line KPIs instead */
+const ANDONS=(hall&&hall.andons)?hall.andons.slice():[];if(hall)hall.andons=[];
 
 /* ---------- line definition ---------- */
 /* body length along X and how far each machine's own conveyor sticks out of the body (in / out side) */
 const DIMS={loader:{len:1600,inR:0,outR:120},printer:{len:1180,inR:250,outR:250},spi:{len:1000,inR:250,outR:250},
   shuttle:{len:1100,inR:120,outR:120},placement:{len:1280,inR:150,outR:150},conveyor:{len:900,inR:0,outR:0},
   reflow:{len:5800,inR:400,outR:400},aoi:{len:1250,inR:235,outR:235},merge:{len:1100,inR:120,outR:120},unloader:{len:1600,inR:120,outR:0}};
+/* auto:true = the handling machines' own operators replenish magazines, empty the reject rack / NG buffer and take full magazines away */
 const SPEC=[
-  {kind:'loader',name:'LOADER'},
+  {kind:'loader',name:'LOADER',auto:true},
   {kind:'printer',name:'PRINTER',pasteDemo:2},
   {kind:'spi',name:'SPI'},
-  {kind:'shuttle',name:'SHUTTLE'},
+  {kind:'shuttle',name:'SHUTTLE',auto:true},
   {kind:'placement',id:'placementA',name:'PLACEMENT A',job:[0,.62]},
-  {kind:'placement',id:'placementB',name:'PLACEMENT B',job:[.62,1]},
+  {kind:'placement',id:'placementB',name:'PLACEMENT B',job:[.62,1],defectRate:.03},   /* mature line: ~3 % of boards with a placement defect */
   {kind:'conveyor',id:'insp',name:'INSPECTION CONVEYOR',length:900,lanes:[1,2],inspection:true},
-  {kind:'reflow',name:'REFLOW OVEN'},
+  {kind:'reflow',name:'REFLOW OVEN',defectRate:.02},
   {kind:'conveyor',id:'cool',name:'COOLING CONVEYOR',length:900,lanes:[1,2]},
   {kind:'aoi',name:'AOI'},
-  {kind:'merge',name:'MERGE / NG BUFFER'},
-  {kind:'unloader',name:'UNLOADER'}
+  {kind:'merge',name:'MERGE / NG BUFFER',auto:true},
+  {kind:'unloader',name:'UNLOADER',auto:true}
 ];
 const PAGE={printer:'printer.html',placement:'placement.html',aoi:'aoi.html',spi:'spi.html',reflow:'reflow.html',
   loader:'handling.html',unloader:'handling.html',shuttle:'handling.html',merge:'handling.html',conveyor:'handling.html'};
@@ -94,7 +97,9 @@ views.postsmt=zv('postsmt',{p:[6000,8000,13000],t:[15000,500,0]});
 views.offices=zv('offices',{p:[12000,9000,6000],t:[19000,1000,18000]});
 views.utility=zv('utility',{p:[-13000,7000,8000],t:[-7000,800,18000]});
 views.walk={p:[-14800,1650,0],t:[-11000,1450,0]};
+views.entrance=zv('entrance',{p:[-7800,2600,-14000],t:[-10500,900,-19600]});
 const vfn={};Object.entries(views).forEach(([k,v])=>{vfn[k]=()=>C.flyTo(v.p,v.t,1.6);});
+if(hall&&hall.views&&typeof hall.views.walk==='function')vfn.tour=hall.views.walk;   /* automatic walk along the main aisle (moves with sim time) */
 C.addViews(vfn);
 
 /* ---------- WASD walking ---------- */
@@ -177,12 +182,14 @@ function applyView(m,k){
   if(m.setHood)try{m.setHood(v.hood?1:0);}catch(e){}
   if(m.setSten)try{m.setSten(!!v.sten);}catch(e){}
   C.flyTo([O.x+v.p[0],v.p[1],O.z+v.p[2]],[O.x+v.t[0],v.t[1],O.z+v.t[2]],1.3);
+  document.querySelectorAll('[data-v]').forEach(b=>b.classList.remove('on'));
 }
 let camIdx=0;
-function setCam(m,i){const cs=m.cameras||[];if(!cs.length){insetEntry.cam=null;$('minset').classList.add('none');return;}
+function setCam(m,i){const cs=m.cameras||[];$('mCam').style.display=cs.length>1?'':'none';if(!cs.length){insetEntry.cam=null;$('minset').classList.add('none');return;}
   camIdx=(i+cs.length)%cs.length;const cam=cs[camIdx];insetEntry.cam=cam.cam;insetEntry.prepare=cam.prepare;insetEntry.override=cam.override||null;
   $('minset').classList.remove('none');$('minsetT').textContent=(cam.name||'CAMERA').toUpperCase()+(cs.length>1?'  ('+(camIdx+1)+'/'+cs.length+')':'');}
 function flyToMachine(m){
+  document.querySelectorAll('[data-v]').forEach(b=>b.classList.remove('on'));
   const O=m.origin(),v=m.views&&(m.views.over||m.views.iso||Object.values(m.views)[0]);
   if(v&&v.p&&v.t)C.flyTo([O.x+v.p[0],v.p[1],O.z+v.p[2]],[O.x+v.t[0],v.t[1],O.z+v.t[2]],1.4);
   else C.flyTo([O.x-2200,2600,O.z+3800],[O.x,900,O.z],1.4);
@@ -213,7 +220,7 @@ function drawGantt(){
   const g=gc.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,r.width,r.height);
   const ln=lineObjs.find(l=>l.id===$('gLine').value)||lineObjs[0],ms=ln.ms,LW=138,H=r.height-16,rh=Math.max(6,Math.min(15,H/ms.length)),t1=C.T.sim,t0=t1-WIN,W=r.width-LW-10;
   const X=t=>LW+(Math.max(t0,t)-t0)/WIN*W;
-  g.font='600 10.5px "Segoe UI",Arial';g.textBaseline='middle';
+  g.font=`600 ${Math.max(7.5,Math.min(10.5,rh-1.5)).toFixed(1)}px "Segoe UI",Arial`;g.textBaseline='middle';
   ms.forEach((m,i)=>{const y=4+i*rh;
     g.fillStyle=m===sel?css('--acc2'):css('--mut');g.fillText(m.label.slice(0,20),8,y+rh/2);
     g.fillStyle=css('--btn');g.fillRect(LW,y+1,W,rh-2);
@@ -227,7 +234,7 @@ $('gLine').onchange=drawGantt;
 
 /* ---------- plant map ---------- */
 const mc=$('mapC');
-const HB=(hall&&hall.size)?{x0:-hall.size[0]/2,x1:hall.size[0]/2,z0:-hall.size[1]/2,z1:hall.size[1]/2}:{x0:-36000,x1:36000,z0:-21000,z1:21000};
+const HS=hall&&hall.size,HB=HS&&HS.x0!==undefined?{x0:HS.x0,x1:HS.x1,z0:HS.z0,z1:HS.z1}:(Array.isArray(HS)?{x0:-HS[0]/2,x1:HS[0]/2,z0:-HS[1]/2,z1:HS[1]/2}:{x0:-36000,x1:36000,z0:-21000,z1:21000});
 let mapT=null;
 function mapXf(r){const pad=8,sx=(r.width-2*pad)/(HB.x1-HB.x0),sz=(r.height-2*pad)/(HB.z1-HB.z0),s=Math.min(sx,sz),ox=(r.width-(HB.x1-HB.x0)*s)/2,oz=(r.height-(HB.z1-HB.z0)*s)/2;
   return{s,X:x=>ox+(x-HB.x0)*s,Z:z=>oz+(z-HB.z0)*s,inv:(px,pz)=>[(px-ox)/s+HB.x0,(pz-oz)/s+HB.z0]};}
@@ -242,7 +249,7 @@ function drawMap(){
   if(hall&&hall.zones){g.font='600 8.5px "Segoe UI",Arial';Object.entries(hall.zones).forEach(([k,z])=>{if(!z||z.x0===undefined)return;
     g.fillStyle='rgba(120,160,220,.10)';g.fillRect(T.X(z.x0),T.Z(z.z0),(z.x1-z.x0)*T.s,(z.z1-z.z0)*T.s);
     g.strokeStyle='rgba(120,160,220,.35)';g.strokeRect(T.X(z.x0),T.Z(z.z0),(z.x1-z.x0)*T.s,(z.z1-z.z0)*T.s);
-    g.fillStyle=css('--mut');g.fillText(k.toUpperCase(),T.X(z.x0)+3,T.Z(z.z0)+9);});}
+    if(k!=='smt'){g.fillStyle=css('--mut');g.textAlign='center';g.fillText(k.toUpperCase(),T.X((z.x0+z.x1)/2),T.Z((z.z0+z.z1)/2)+3);g.textAlign='left';}});}
   allM.forEach(m=>{const O=m.origin(),L=m.length||1000,D=m.depth||1200;g.fillStyle=scol(m.state);g.globalAlpha=m===sel?1:.85;
     g.fillRect(T.X(O.x-L/2),T.Z(O.z-D/2),Math.max(2,L*T.s),Math.max(2,D*T.s));g.globalAlpha=1;
     if(m===sel){g.strokeStyle=css('--tx');g.lineWidth=1.5;g.strokeRect(T.X(O.x-L/2)-1.5,T.Z(O.z-D/2)-1.5,L*T.s+3,D*T.s+3);}});
@@ -257,10 +264,12 @@ mc.addEventListener('click',e=>{if(!mapT)return;const r=mc.getBoundingClientRect
   C.flyTo([x+off.x,Math.max(1600,off.y),z+off.z],[x,600,z],1.2);});
 
 /* ---------- andon boards above the lines ---------- */
-function andonOf(a){const u=(a&&a.userData)||(a&&a.group&&a.group.userData)||{};return{ctx:a.ctx||u.ctx,tex:a.tex||u.tex,line:a.line||u.line};}
+function andonOf(a){const o=(a&&(a.board||a.group))||a,u=(o&&o.userData)||{};return{obj:o,ctx:a.ctx||u.ctx,tex:a.tex||u.tex,line:a.line||u.line};}
+const _ap=new THREE.Vector3();
+function andonLine(A){if(A.obj&&A.obj.getWorldPosition){A.obj.getWorldPosition(_ap);let best=null,bd=1e12;lineObjs.forEach(l=>{const d=Math.abs(l.z-_ap.z);if(d<bd){bd=d;best=l;}});if(best)return best;}
+  return lineObjs.find(l=>l.id===A.line||l.name===A.line)||lineObjs[0];}
 function drawAndons(){
-  if(!hall||!hall.andons)return;
-  hall.andons.forEach((a,i)=>{const A=andonOf(a);if(!A.ctx)return;const ln=lineObjs.find(l=>l.id===A.line)||lineObjs[i%lineObjs.length];if(!ln)return;
+  ANDONS.forEach((a,i)=>{const A=andonOf(a);if(!A.ctx)return;const ln=andonLine(A);if(!ln)return;
     const g=A.ctx,W=g.canvas.width,H=g.canvas.height,k=lineKpis(ln);
     g.fillStyle='#0b1018';g.fillRect(0,0,W,H);g.fillStyle='#1e6fd9';g.fillRect(0,0,W,H*.14);
     g.fillStyle='#fff';g.font=`900 ${H*.09}px Arial`;g.textBaseline='middle';g.textAlign='left';g.fillText(ln.name+'  ·  SMT',W*.03,H*.07);

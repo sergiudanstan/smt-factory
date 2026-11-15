@@ -1,18 +1,18 @@
 /* HANDLING — stand-alone page: loader -> shuttle -> inspection conveyor -> merge -> unloader */
 'use strict';
 (function(){
-const C=SMT3D.init({camPos:[-1200,3300,9800],camTgt:[0,700,0],maxDist:16000,shadow:2600,shadowFar:12000,followShadow:true,contact:[8200,2600],esd:8200});
+const C=SMT3D.init({camPos:[0,3600,9800],camTgt:[-60,650,0],maxDist:25000,shadow:7000,shadowFar:16000,followShadow:true,contact:[10000,3000],esd:11000});
 SMT_LINE.install(C);
 /* rails of neighbouring machines meet: gap = outReach + inReach */
 const L=C.build('loader',{x:-2860,standalone:true,prepare:b=>{if(C.rnd()<.05)b.spi={ng:true};}});
 const S=C.build('shuttle',{x:-1270,standalone:true});
-const V=C.build('conveyor',{x:0,length:1200,lanes:[1,2],inspection:true,standalone:true,onBoard:b=>{if(C.rnd()<.08){b.result='NG';b.aoi={real:Math.random()<.4};}}});
+const V=C.build('conveyor',{x:0,length:1200,lanes:[1,2],inspection:true,standalone:true,onBoard:b=>{if(C.rnd()<.08){b.result='NG';b.ngBy='INSP';}}});
 const G=C.build('merge',{x:1270,standalone:true});
 const U=C.build('unloader',{x:2860,standalone:true});
 C.line.connect();
 const ms=[[L,'ld'],[S,'sh'],[V,'cv'],[G,'mg'],[U,'ul']];
-const vmap={over:()=>C.flyTo([-1200,3300,9800],[0,700,0])};
-ms.forEach(([m,p])=>Object.entries(m.views).forEach(([k,v])=>{vmap[p+'_'+k]=()=>{if(v.hood)ms.forEach(a=>a[0].setHood&&a[0].setHood(a[0]===m));const O=m.origin();const zf=1.7,t=[v.t[0]+O.x,v.t[1],v.t[2]+O.z];C.flyTo([t[0]+(v.p[0]+O.x-t[0])*zf,t[1]+(v.p[1]-t[1])*zf,t[2]+(v.p[2]+O.z-t[2])*zf],t);};}));
+const vmap={over:()=>C.flyTo([0,3600,9800],[-60,650,0])};
+ms.forEach(([m,p])=>Object.entries(m.views).forEach(([k,v])=>{vmap[p+'_'+k]=()=>{ms.forEach(a=>{if(a[0].setHood)a[0].setHood(!!(v.hood&&a[0]===m));if(a[0].setDoor)a[0].setDoor(!!(v.door&&a[0]===m));});const O=m.origin();const t=[v.t[0]+O.x,v.t[1],v.t[2]+O.z];C.flyTo([v.p[0]+O.x,v.p[1],v.p[2]+O.z],t);};}));
 C.addViews(vmap);
 let hoods=false;const $=id=>document.getElementById(id);
 $('bHood').onclick=()=>{hoods=!hoods;ms.forEach(a=>a[0].setHood(hoods));$('bHood').textContent=hoods?'Close covers':'Open covers';$('bHood').classList.toggle('on',hoods);};
