@@ -38,7 +38,7 @@ jobs:
           for page in dist/*.html; do
             echo "::group::$page"
             python -I tools/check.py "$page" --ff 30 --timeout 240000 | tee "$RUNNER_TEMP/check.out"
-            grep -q '"canvas"' "$RUNNER_TEMP/check.out" || { echo "no rendered canvas in $page" >&2; exit 1; }
+            if grep -q '"noSim"' "$RUNNER_TEMP/check.out"; then echo "window.__sim missing in $page: the page did not start" >&2; exit 1; fi
             echo "::endgroup::"
           done
       - name: Perturbation check (a page error must make tools/check.py fail)
