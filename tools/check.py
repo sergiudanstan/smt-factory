@@ -17,6 +17,7 @@ options:
   --shot FILE     one screenshot of the current view
   --after MS      wait after each view change (default 1700)
   --light         switch the page to the light theme first
+  --timeout MS    page load timeout (default 30000; factory.html needs more on software GL)
 Exit code 1 if there were page errors.
 """
 import sys, json, asyncio, argparse, pathlib
@@ -55,7 +56,7 @@ async def main(a):
         pg.on('console', con)
         if a.light:
             await pg.add_init_script("try{localStorage.setItem('smt-theme','light')}catch(e){}")
-        await pg.goto(url)
+        await pg.goto(url, timeout=a.timeout)
         await pg.wait_for_timeout(a.wait)
         if a.ff:
             await pg.evaluate(f'() => window.__sim && window.__sim.ff({a.ff})')
@@ -92,5 +93,5 @@ if __name__ == '__main__':
     ap.add_argument('page'); ap.add_argument('--size', default='1600x1000'); ap.add_argument('--wait', type=int, default=2500)
     ap.add_argument('--ff', type=float, default=0); ap.add_argument('--eval', action='append'); ap.add_argument('--views')
     ap.add_argument('--outdir'); ap.add_argument('--shot'); ap.add_argument('--after', type=int, default=1700)
-    ap.add_argument('--light', action='store_true')
+    ap.add_argument('--light', action='store_true'); ap.add_argument('--timeout', type=int, default=30000)
     sys.exit(asyncio.run(main(ap.parse_args())))
