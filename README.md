@@ -39,10 +39,9 @@ src/shell.*, src/pcbkit.js   shared side panel and the demo board
 src/vendor/                  three.js r147, OrbitControls, BufferGeometryUtils (see THIRD_PARTY_NOTICES.md)
 build.py                     inlines every src/pages/*.html into dist/<page>.html
 tools/check.py               headless Chrome check of a built page (see below)
-briefs/, reports/, reference/  working notes from how the suite was built
 ```
 
-`dist/` is committed, because it is what the Pages site serves. Change `src/`, run `python3 build.py`, and commit the result with it. The module contract is in [briefs/CONTRACT.md](briefs/CONTRACT.md) and file ownership in [briefs/OWNERS.md](briefs/OWNERS.md).
+`dist/` is committed, because it is what the Pages site serves. Change `src/`, run `python3 build.py`, and commit the result with it.
 
 ## Development
 

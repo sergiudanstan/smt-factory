@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-26
+
+### Removed
+- `briefs/`, `reports/` and `reference/`: working notes and earlier versions of the machine pages from how the suite was built. Nothing in `build.py`, `tools/`, CI or `src/` read them; `dist/` is byte-identical before and after.
+
 ## [0.1.0] - 2026-11-25
 
 First tagged release of the SMT Factory Suite as published at
@@ -25,5 +30,6 @@ that runs two complete SMT lines inside the hall.
 - `tools/check.py` gained a `--timeout` option (default unchanged at 30 s) because `factory.html`
   can take longer than that to load on software WebGL.
 
-[Unreleased]: https://github.com/sergiudanstan/smt-factory/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/sergiudanstan/smt-factory/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/sergiudanstan/smt-factory/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/sergiudanstan/smt-factory/releases/tag/v0.1.0
