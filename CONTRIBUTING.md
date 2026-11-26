@@ -19,7 +19,7 @@ before starting anything substantial.
 
 ## File ownership
 
-This repository was built with one writer per file; [briefs/OWNERS.md](briefs/OWNERS.md) lists who owns what, and `src/vendor/`, `src/shell.*`, `src/pcbkit.js` and `reference/` are read-only. Keep to it: do not restructure, and if a change needs another module's file, say so in the pull request.
+This repository was built with one writer per file, and `src/vendor/`, `src/shell.*` and `src/pcbkit.js` are read-only. Keep to it: do not restructure, and if a change needs another module's file, say so in the pull request.
 
 ## Running it locally
 
